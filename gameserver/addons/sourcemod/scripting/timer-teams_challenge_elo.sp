@@ -89,7 +89,7 @@ public ConnectSQLCallback(Handle:owner, Handle:hndl, const String:error[], any:d
 	if (StrEqual(driver, "mysql", false))
 	{
 		SQL_SetCharset(g_hSQL, "utf8");
-		SQL_TQuery(g_hSQL, CreateSQLTableCallback, "CREATE TABLE IF NOT EXISTS `pvp_challenge` (`id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, `map` varchar(32) NOT NULL, `style` int(8) NOT NULL, `bonus` int(8) NOT NULL, `auth_winner` varchar(32) NOT NULL,`name_winner` varchar(64) NOT NULL,`auth_loser` varchar(32) NOT NULL,`name_loser` varchar(64) NOT NULL,`diff` int(8) NOT NULL,`count` int(8) NOT NULL, date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY `single_auth` (`map`,`style`,`bonus`,`auth_winner`,`auth_loser`));");
+		SQL_TQuery(g_hSQL, CreateSQLTableCallback, "CREATE TABLE IF NOT EXISTS `pvp_challenge` (`id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, `map` varchar(32) NOT NULL, `style` int(8) NOT NULL, `track` int(8) NOT NULL, `auth_winner` varchar(32) NOT NULL,`name_winner` varchar(64) NOT NULL,`auth_loser` varchar(32) NOT NULL,`name_loser` varchar(64) NOT NULL,`diff` int(8) NOT NULL,`count` int(8) NOT NULL, date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY `single_auth` (`map`,`style`,`track`,`auth_winner`,`auth_loser`));");
 		SQL_TQuery(g_hSQL, CreateSQLTableCallback, "CREATE TABLE IF NOT EXISTS `pvp_elo` (auth varchar(32) NOT NULL, name varchar(64) NOT NULL, rating int(8) NOT NULL, rating_max int(8) NOT NULL, rating_min int(8) NOT NULL,win int(8) NOT NULL, loose int(8) NOT NULL,UNIQUE KEY `single_auth` (`auth`));");
 	}
 	
@@ -205,10 +205,10 @@ public OnChallengeWin(winner, loser)
 	decl String:query[2048];
 	decl String:map[128];
 	decl String:auth_winner[128], String:auth_loser[128], String:name_winner[128], String:name_loser[128];
-	new style, bonus;
+	new style, track;
 	
 	style = Timer_GetStyle(winner);
-	bonus = Timer_GetTrack(winner);
+	track = Timer_GetTrack(winner);
 	
 	if(IsFakeClient(loser))
 		g_iELO[loser] = 1000;
@@ -254,7 +254,7 @@ public OnChallengeWin(winner, loser)
 	}
 	
 	//Tracker
-	FormatEx(query, sizeof(query), "INSERT INTO pvp_challenge (`map`, `style`, `bonus`, `auth_winner`, `name_winner`, `auth_loser`, `name_loser`, `diff`, `count`) VALUES ('%s', '%d', '%d', '%s', '%s', '%s', '%s', '%d', '1') ON DUPLICATE KEY UPDATE `diff` = `diff` + '%d', `count` = `count` + '1', date = CURRENT_TIMESTAMP();", map, style, bonus, auth_winner, name_winner, auth_loser, name_loser, diff, diff);
+	FormatEx(query, sizeof(query), "INSERT INTO pvp_challenge (`map`, `style`, `track`, `auth_winner`, `name_winner`, `auth_loser`, `name_loser`, `diff`, `count`) VALUES ('%s', '%d', '%d', '%s', '%s', '%s', '%s', '%d', '1') ON DUPLICATE KEY UPDATE `diff` = `diff` + '%d', `count` = `count` + '1', date = CURRENT_TIMESTAMP();", map, style, track, auth_winner, name_winner, auth_loser, name_loser, diff, diff);
 	SQL_TQuery(g_hSQL, PvPChallengeCallback, query, _, DBPrio_High);
 	
 	//Reload Stats
