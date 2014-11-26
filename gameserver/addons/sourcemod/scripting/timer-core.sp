@@ -705,14 +705,14 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 	
 	new flashbangcount; //TODO
 	
-	new levelprocess;
+	new stage;
 	
 	if(track == TRACK_NORMAL)
-		levelprocess = LEVEL_END;
+		stage = LEVEL_END;
 	else if(track == TRACK_BONUS)
-		levelprocess = LEVEL_BONUS_END;
+		stage = LEVEL_BONUS_END;
 	else
-		levelprocess = Timer_GetClientLevel(client);
+		stage = Timer_GetClientLevel(client);
 	
 	if (time < 1.0)
 	{
@@ -936,13 +936,13 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 		{
 			//Save record
 			decl String:query[2048];
-			FormatEx(query, sizeof(query), "INSERT INTO round (map, auth, time, jumps, style, name, fpsmax, track, rank, jumpacc, maxspeed, avgspeed, finishspeed, finishcount, strafes, strafeacc, flashbangcount, levelprocess, replaypath) VALUES ('%s', '%s', %f, %d, %d, '%s', %d, %d, %d, %f, %f, %f, %f, 1, %d, %f, %d, %d, '%s') ON DUPLICATE KEY UPDATE time = '%f', jumps = '%d', name = '%s', fpsmax = '%d', rank = '%d', jumpacc = '%f', maxspeed = '%f', avgspeed = '%f', finishspeed = '%f', finishcount = finishcount + 1, strafes = '%d', strafeacc = '%f', flashbangcount = '%d', levelprocess = '%d', replaypath = '%s', date = CURRENT_TIMESTAMP();", map, auth, time, jumps, style, safeName, fpsmax, track, newrank, jumpacc, maxspeed, avgspeed, currentspeed, strafes, strafeacc, flashbangcount, levelprocess, g_timers[client][ReplayFile], time, jumps, safeName, fpsmax, newrank, jumpacc, maxspeed, avgspeed, currentspeed, strafes, strafeacc, flashbangcount, levelprocess, g_timers[client][ReplayFile]);
+			FormatEx(query, sizeof(query), "INSERT INTO round (map, auth, time, jumps, style, name, fpsmax, track, rank, jumpacc, maxspeed, avgspeed, finishspeed, finishcount, strafes, strafeacc, flashbangcount, stage, replaypath) VALUES ('%s', '%s', %f, %d, %d, '%s', %d, %d, %d, %f, %f, %f, %f, 1, %d, %f, %d, %d, '%s') ON DUPLICATE KEY UPDATE time = '%f', jumps = '%d', name = '%s', fpsmax = '%d', rank = '%d', jumpacc = '%f', maxspeed = '%f', avgspeed = '%f', finishspeed = '%f', finishcount = finishcount + 1, strafes = '%d', strafeacc = '%f', flashbangcount = '%d', stage = '%d', replaypath = '%s', date = CURRENT_TIMESTAMP();", map, auth, time, jumps, style, safeName, fpsmax, track, newrank, jumpacc, maxspeed, avgspeed, currentspeed, strafes, strafeacc, flashbangcount, stage, g_timers[client][ReplayFile], time, jumps, safeName, fpsmax, newrank, jumpacc, maxspeed, avgspeed, currentspeed, strafes, strafeacc, flashbangcount, stage, g_timers[client][ReplayFile]);
 			SQL_TQuery(g_hSQL, FinishRoundCallback, query, client, DBPrio_High);
 		}
 		else
 		{
 			decl String:query[2048];
-			FormatEx(query, sizeof(query), "INSERT INTO round (map, auth, time, jumps, style, name, fpsmax, track, rank, jumpacc, maxspeed, avgspeed, finishspeed, finishcount, strafes, strafeacc, flashbangcount, levelprocess, replaypath) VALUES ('%s', '%s', %f, %d, %d, '%s', %d, %d, %d, %f, %f, %f, %f, 1, %d, %f, %d, %d, '%s') ON DUPLICATE KEY UPDATE name = '%s', finishcount = finishcount + 1;", map, auth, time, jumps, style, safeName, fpsmax, track, newrank, jumpacc, maxspeed, avgspeed, currentspeed, strafes, strafeacc, flashbangcount, levelprocess, g_timers[client][ReplayFile], safeName);
+			FormatEx(query, sizeof(query), "INSERT INTO round (map, auth, time, jumps, style, name, fpsmax, track, rank, jumpacc, maxspeed, avgspeed, finishspeed, finishcount, strafes, strafeacc, flashbangcount, stage, replaypath) VALUES ('%s', '%s', %f, %d, %d, '%s', %d, %d, %d, %f, %f, %f, %f, 1, %d, %f, %d, %d, '%s') ON DUPLICATE KEY UPDATE name = '%s', finishcount = finishcount + 1;", map, auth, time, jumps, style, safeName, fpsmax, track, newrank, jumpacc, maxspeed, avgspeed, currentspeed, strafes, strafeacc, flashbangcount, stage, g_timers[client][ReplayFile], safeName);
 			SQL_TQuery(g_hSQL, FinishRoundCallback, query, client, DBPrio_High);
 		}
 	}
@@ -1002,7 +1002,6 @@ public FinishRoundCallback(Handle:owner, Handle:hndl, const String:error[], any:
 	}
 
 	g_bestTimeCache[client][IsCached] = false;
-	//PrintToChat(client, "Your stats have been stored into our database, thank you.");
 	
 	if(g_timerWorldRecord) Timer_ForceReloadCache();
 }
@@ -1212,11 +1211,11 @@ public CreditsPanel(client)
 	DrawPanelText(panel, " ");
 	DrawPanelText(panel, "Alongub - Timer 1.x");
 	DrawPanelText(panel, "Das D - Player Info, Timer Info");
-	DrawPanelText(panel, "Paduh - Chatrank");
+	DrawPanelText(panel, "Panduh - Chatrank");
 	DrawPanelText(panel, "Peace-Maker - bot mimic 2, backwards and much more");
 	DrawPanelText(panel, "Shavit - Added new features and supported plugin");
 	DrawPanelText(panel, "0wn3r - Many small improvements");
-	DrawPanelText(panel, " ");
+	DrawPanelText(panel, "eagle-vision.de - Rewriting advanced php stats");
 	DrawPanelItem(panel, "- Next -");
 	DrawPanelItem(panel, "- Exit -");
 	SendPanelToClient(panel, client, CreditsHandler1, MENU_TIME_FOREVER);
@@ -1268,7 +1267,7 @@ public CreditsPanel2(client)
 	DrawPanelText(panel, "Miu - Strafe stats");
 	DrawPanelText(panel, "Inami - Macrodox detection");
 	DrawPanelText(panel, "SMAC Team - Auto jump trigger detection");
-	DrawPanelText(panel, " ");
+	DrawPanelText(panel, "fr3shz - CS:GO pack for surf map");
 	DrawPanelItem(panel, "- Back -");
 	DrawPanelItem(panel, "- Next -");
 	DrawPanelItem(panel, "- Exit -");

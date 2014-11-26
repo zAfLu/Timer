@@ -108,24 +108,25 @@ public Action:Cmd_SpecMost(client, args)
 
 public Action:Cmd_SpecList(client, args)
 {
-	new spectators = 0, String:buffer[128];
+	new spectators = 0, String:buffer[1024];
 
 	for(new i = 1; i <= MaxClients; i++)
 	{
 		if(i == client)
 			continue;
 		
-		if(IsValidClient(i, true))
+		if(Client_IsValid(i, true))
 		{
-			new SpecMode = GetEntProp(i, Prop_Send, "m_iObserverMode");
-			
-			if(SpecMode == 4 || SpecMode == 5)
+			// missing check for IsClientInGame in Client_IsValid?
+			if(IsClientInGame(i))
 			{
-				if(GetEntPropEnt(i, Prop_Send, "m_hObserverTarget") == client)
+				new SpecMode = GetEntProp(i, Prop_Send, "m_iObserverMode");
+				
+				if(SpecMode == 4 || SpecMode == 5)
 				{
-					spectators++;
-					if(spectators > 0)
+					if(GetEntPropEnt(i, Prop_Send, "m_hObserverTarget") == client)
 					{
+						spectators++;
 						if(spectators > 1) Format(buffer, sizeof(buffer), "%s, %N", buffer, i);
 						else Format(buffer, sizeof(buffer), "%N", i);
 					}
@@ -134,8 +135,12 @@ public Action:Cmd_SpecList(client, args)
 		}
 	}
 
-	if(spectators > 0) PrintToChat(client, "[SPEC-LIST] Found %d spectators: %s.", spectators, buffer);
-	else PrintToChat(client, "[SPEC-LIST] Nobody is spectating you. ");
+	if(spectators > 0) 
+	{
+		PrintToChat(client, "[SPEC-LIST] You have %d spectators:", spectators);
+		PrintToChat(client, "%s.", buffer);
+	}
+	else PrintToChat(client, "[SPEC-LIST] Nobody is spectating you.");
 
 	return Plugin_Handled;
 }
@@ -170,14 +175,4 @@ public Action:Cmd_SpecFar(client, args)
 	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", target);
 
 	return Plugin_Handled;
-}
-
-stock bool:IsValidClient(client, bool:alive = false)
-{
-	if(client >= 1 && client <= MaxClients && IsClientConnected(client) && IsClientInGame(client) && (!alive || IsPlayerAlive(client)))
-	{
-		return true;
-	}
-	
-	return false;
 }

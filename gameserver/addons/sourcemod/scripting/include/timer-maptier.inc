@@ -3,11 +3,22 @@
 #endif
 #define _timer_maptier_included
 
+/* Forwards */
+
+/**
+ * Called when all tiers are loaded from the database.
+ *
+ * @noreturn
+ */
+forward OnMapTiersLoaded();
+
 /* Natives */
-native Timer_GetTier(bonus);
-native Timer_SetTier(bonus, tier);
-native Timer_GetStageCount(bonus);
-native Timer_UpdateStageCount(bonus);
+native Timer_GetTier(track);
+native Timer_SetTier(track, tier);
+native Timer_GetMapTier(String:map[], track);
+native Timer_GetStageCount(track);
+native Timer_GetMapStageCount(String:map[], track);
+native Timer_UpdateStageCount(track);
 	
 public SharedPlugin:__pl_timer_maptier = 
 {

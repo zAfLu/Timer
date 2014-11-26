@@ -42,6 +42,7 @@ public OnPluginStart()
 {
 	LoadTranslations("timer.phrases");
 	RegConsoleCmd("sm_hide", Command_Hide);
+	RegConsoleCmd("sm_unhide", Command_UnHide);
 	
 	AddTempEntHook("Shotgun Shot", CSS_Hook_ShotgunShot);
 
@@ -172,6 +173,9 @@ public Action:CSS_Hook_ShotgunShot(const String:te_name[], const Players[], numC
 
 public Action:Command_Hide(client, args)
 {
+	if(!IsClientInGame(client))
+		return Plugin_Handled;
+	
 	if(g_bHide[client])
 	{
 		g_bHide[client] = false;
@@ -183,6 +187,18 @@ public Action:Command_Hide(client, args)
 		CPrintToChat(client, PLUGIN_PREFIX, "Hide Enabled");
 	}
 	
+	CheckHooks();
+	
+	return Plugin_Handled;
+}
+
+public Action:Command_UnHide(client, args)
+{
+	if(!IsClientInGame(client))
+		return Plugin_Handled;
+	
+	g_bHide[client] = false;
+	CPrintToChat(client, PLUGIN_PREFIX, "Hide Disabled");
 	CheckHooks();
 	
 	return Plugin_Handled;

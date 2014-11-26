@@ -20,7 +20,7 @@
 
 enum UserJumps
 {
-	Float:LastJumpTimes[3],
+	Float:LastJumpTimes[4],
 }
 
 new bool:g_timerMapzones = false;
@@ -141,6 +141,8 @@ new g_iButtonOffs_vecPosition1 = -1;
 new g_iButtonOffs_vecPosition2 = -1;
 new g_iButtonOffs_flSpeed = -1;
 new g_iButtonOffs_spawnflags = -1;
+
+new Float:g_fLastTimeLadderUsed[MAXPLAYERS+1];
 
 //SDK Stuff
 new Handle:g_hSDK_Touch = INVALID_HANDLE;
@@ -470,19 +472,25 @@ public Action:Event_PlayerJump(Handle:event, const String:name[], bool:dontBroad
 		CreateTimer(0.05, DelayedSlowDown, client);
 	}
 	
-	if(g_Physics[style][StyleAntiBhop])
+	if(g_Physics[style][StyleAntiBhop] > 0)
 	{
-		new Float:timediff = time - g_userJumps[client][LastJumpTimes][2];
+		new Float:timediff = time - g_userJumps[client][LastJumpTimes][3];
+		g_userJumps[client][LastJumpTimes][3] = g_userJumps[client][LastJumpTimes][2];
 		g_userJumps[client][LastJumpTimes][2] = g_userJumps[client][LastJumpTimes][1];
 		g_userJumps[client][LastJumpTimes][1] = g_userJumps[client][LastJumpTimes][0];
 		g_userJumps[client][LastJumpTimes][0] = time;
 		
-		if (timediff <= 3.0)
+		if (timediff <= 4.0)
 		{
-			g_userJumps[client][LastJumpTimes][2] = 0.0;
-			g_userJumps[client][LastJumpTimes][1] = 0.0;
-			g_userJumps[client][LastJumpTimes][0] = 0.0;
-			CreateTimer(0.05, DelayedSlowDownDefault, client);
+			// If set to 1 prevent bhop everywhere, if set to 2 use it only inside start zones
+			if(g_Physics[style][StyleAntiBhop] == 1 || Timer_IsPlayerTouchingZoneType(client, ZtStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonusStart))
+			{
+				g_userJumps[client][LastJumpTimes][0] = 0.0;
+				g_userJumps[client][LastJumpTimes][1] = 0.0;
+				g_userJumps[client][LastJumpTimes][2] = 0.0;
+				g_userJumps[client][LastJumpTimes][3] = 0.0;
+				CreateTimer(0.05, DelayedSlowDownDefault, client);
+			}
 		}
 	}
 	
@@ -506,6 +514,9 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 	
 	if(!IsPlayerAlive(client))
 		return Plugin_Continue;
+	
+	if(Client_IsOnLadder(client))
+		g_fLastTimeLadderUsed[client] = GetGameTime();
 	
 	new style = Timer_GetStyle(client);
 	new Float:fGameTime = GetGameTime();
@@ -784,6 +795,12 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 		}
 	}
 	
+	// Freestyle for players which touched a ladder before
+	if(g_Physics[style][StyleLadderFreestyleCooldown] > 0.0 && GetGameTime() - g_fLastTimeLadderUsed[client] < g_Physics[style][StyleLadderFreestyleCooldown])
+	{
+		abuse = false;
+	}
+	
 	if(abuse)
 	{
 		PunishAbuse(client);
@@ -896,7 +913,6 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 		{
 			if(!g_bStayOnGround[client] && g_fBoost[client] > 0.0) 
 			{
-				//PrintToChat(client, "Ready to boost");
 				g_bPushWait[client] = false;
 			}
 			
@@ -1037,7 +1053,7 @@ public MenuHandler_Physics(Handle:menu, MenuAction:action, client, itemNum)
 			{
 				if((g_iBhopButtonCount == 0 && g_iBhopDoorCount == 0) && g_Physics[style][StyleMultiBhop] > 0)
 				{
-					CPrintToChat(client, "%s Multihop and Nohop are not available on this map.", PLUGIN_PREFIX2);
+					CPrintToChat(client, PLUGIN_PREFIX, "Multi bhop not available", client);
 					if(IsClientInGame(client)) FakeClientCommand(client, "sm_style");
 				}
 				else
@@ -1095,7 +1111,7 @@ CreateDifficultyMenu(client)
 				DisplayMenu(menu, client, MENU_TIME_FOREVER);
 			}
 		}
-		else CPrintToChatAll("%s No styles enabled.", PLUGIN_PREFIX2);
+		else CPrintToChatAll(PLUGIN_PREFIX, "No styles enabled");
 	}
 }
 
@@ -1481,7 +1497,7 @@ public Entity_Touch(bhop,client)
 					g_bBhopDoorClientAvoid[doorID][client] = true;
 					avoid = true;
 					if(g_iBhopClientAvoid[client] == 1) 
-						CPrintToChat(client, "%s You failed vegas mission. You need to restart to collect all vegas plattforms.", PLUGIN_PREFIX2);
+						CPrintToChat(client, PLUGIN_PREFIX, "You failed vegas mission", client);
 				}
 			}
 			else if(buttonID != -1  && g_bBhopButtonAvoid[buttonID])
@@ -1491,7 +1507,7 @@ public Entity_Touch(bhop,client)
 					g_bBhopButtonClientAvoid[buttonID][client] = true;
 					avoid = true;
 					if(g_iBhopClientAvoid[client] == 1) 
-						CPrintToChat(client, "%s You failed vegas mission. You need to restart to collect all vegas plattforms.", PLUGIN_PREFIX2);
+						CPrintToChat(client, PLUGIN_PREFIX, "You failed vegas mission", client);
 				}
 			}
 			
@@ -1533,14 +1549,17 @@ public Entity_Touch(bhop,client)
 					{
 						Timer_AddPoints(client, g_Settings[PointsVegas]+(g_Settings[PointsVegasAdd]*g_iVegasWinCount));
 						Timer_SavePoints(client);
-						CPrintToChatAll("%s %N Collected all vegas plattforms and got %d points for completing vegas mission.", PLUGIN_PREFIX2, client, g_Settings[PointsVegasAdd]*g_iVegasWinCount);
+						
+						decl String:sName[32];
+						GetClientName(client, sName, sizeof(sName));
+						CPrintToChatAll(PLUGIN_PREFIX, "Vegas won", sName, g_Settings[PointsVegasAdd]*g_iVegasWinCount);
 						AlterBhopBlocks(true);
 						AlterBhopBlocks(false);
 					}
 				
 					if(g_iVegasWinCount >= g_Settings[VegasMapMaxGames])
 					{
-						CPrintToChatAll("%s This was the last vegas mission until mapchange!", PLUGIN_PREFIX2);
+						CPrintToChatAll(PLUGIN_PREFIX, "Vegas final game");
 					}
 				}
 				else
@@ -2045,9 +2064,16 @@ public Action:Timer_CheckNoClip(Handle:timer)
 		{
 			if(IsClientConnected(client) && IsClientSourceTV(client))
 				continue;
+			
 			//has player noclip?
 			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 			{
+				if(Timer_IsPlayerTouchingZoneType(client, ZtAntiNoclip))
+				{
+					SetEntityMoveType(client, MOVETYPE_WALK);
+					CheckVelocity(client, 1, 0.1);
+				}
+				
 				Timer_Stop(client, false);
 				ResetBhopAvoid(client);
 				ResetBhopCollect(client);
@@ -2121,7 +2147,7 @@ public Action:Command_NoclipMe(client, args)
 	
 	if(g_Settings[NoclipEnable])
 	{
-		if (GetEntityMoveType(client) != MOVETYPE_NOCLIP)
+		if (GetEntityMoveType(client) != MOVETYPE_NOCLIP && !Timer_IsPlayerTouchingZoneType(client, ZtAntiNoclip))
 		{
 			FakeClientCommand(client, "sm_pause");
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
@@ -2215,30 +2241,33 @@ Client_BoostForward(client, Float:scale, Float:maxspeed)
 	}
 }
 
-PunishAbuse(client)
+PunishAbuse(client, type = -1)
 {
 	new style = Timer_GetStyle(client);
 	
-	if(g_Physics[style][StylePunishType] == 0)
+	if(type == -1)
+		type = g_Physics[style][StylePunishType];
+	
+	if(type <= 0)
 		return;
 	
 	//Block controls
-	if(g_Physics[style][StylePunishType] == 1)
+	if(type == 1)
 	{
 		Block_MovementControl(client);
 	}
 	//Stop movement
-	else if(g_Physics[style][StylePunishType] == 2)
+	else if(type == 2)
 	{
 		CheckVelocity(client, 1, 250.0);
 	}
 	//Reset timer
-	else if(g_Physics[style][StylePunishType] == 3)
+	else if(type == 3)
 	{
 		Timer_Reset(client);
 	}
 	//Teleport to startzone
-	else if(g_Physics[style][StylePunishType] == 4)
+	else if(type == 4)
 	{
 		if(Timer_GetTrack(client) == TRACK_BONUS)
 			Timer_ClientTeleportLevel(client, LEVEL_BONUS_START);
@@ -2246,12 +2275,12 @@ PunishAbuse(client)
 			Timer_ClientTeleportLevel(client, LEVEL_START);
 	}
 	//Suiside
-	else if(g_Physics[style][StylePunishType] == 5)
+	else if(type == 5)
 	{
 		ForcePlayerSuicide(client);
 	}
 	//Teleport to last checkpoint
-	else if(g_Physics[style][StylePunishType] == 6)
+	else if(type == 6)
 	{
 		new levelid = Timer_GetClientLevelID(client);
 		Timer_ClientTeleportLevel(client, levelid);

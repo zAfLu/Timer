@@ -3,7 +3,6 @@
 #include <sourcemod>
 #include <sdktools>
 #include <smlib>
-#include <timer>
 #include <timer-mysql>
 #include <timer-config_loader.sp>
 #include <timer-stocks>
@@ -213,32 +212,19 @@ public GetDBVersionCallback(Handle:owner, Handle:hndl, const String:error[], any
 
 stock CheckVersionOutdated(String:version_old[], String:version_new[])
 {
-	decl String:versions_old[5][32];
-	ExplodeString(version_old, ".", versions_old, 5, 32);
+	decl String:versions_old[4][32];
+	ExplodeString(version_old, ".", versions_old, 4, 32);
 	
-	decl String:versions_new[5][32];
-	ExplodeString(version_new, ".", versions_new, 5, 32);
+	decl String:versions_new[4][32];
+	ExplodeString(version_new, ".", versions_new, 4, 32);
 	
-	if(StringToInt(version_old[0]) < StringToInt(version_new[0]))
-		return true;
-	if(StringToInt(version_old[0]) > StringToInt(version_new[0]))
-		return false;
-	if(StringToInt(version_old[1]) < StringToInt(version_new[1]))
-		return true;
-	if(StringToInt(version_old[1]) > StringToInt(version_new[1]))
-		return false;
-	if(StringToInt(version_old[2]) < StringToInt(version_new[2]))
-		return true;
-	if(StringToInt(version_old[2]) > StringToInt(version_new[2]))
-		return false;
-	if(StringToInt(version_old[3]) < StringToInt(version_new[3]))
-		return true;
-	if(StringToInt(version_old[3]) > StringToInt(version_new[3]))
-		return false;
-	if(StringToInt(version_old[4]) < StringToInt(version_new[4]))
-		return true;
-	if(StringToInt(version_old[4]) > StringToInt(version_new[4]))
-		return false;
+	for (new i = 0; i < 4; i++)
+	{
+		if(StringToInt(versions_old[i]) < StringToInt(versions_new[i]))
+			return true;
+		else if(StringToInt(versions_old[i]) > StringToInt(versions_new[i]))
+			return false;
+	}
 	
 	return false;
 }
@@ -303,7 +289,7 @@ stock InstallNew()
 	SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	
 	/* Create ROUND table */ 
-	Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `round` (`id` int(11) NOT NULL AUTO_INCREMENT, `map` varchar(32) NOT NULL, `auth` varchar(32) NOT NULL, `time` float NOT NULL, `jumps` int(11) NOT NULL, `style` int(11) NOT NULL, `track` int(11) NOT NULL, `name` varchar(64) NOT NULL, `finishcount` int(11) NOT NULL, `levelprocess` int(11) NOT NULL, `fpsmax` int(11) NOT NULL, `jumpacc` float NOT NULL, `strafes` int(11) NOT NULL, `strafeacc` float NOT NULL, `avgspeed` float NOT NULL, `maxspeed` float NOT NULL, `finishspeed` float NOT NULL, `flashbangcount` int(11) NULL, `rank` int(11) NOT NULL, `replaypath` varchar(32) NOT NULL, `custom1` varchar(32) NOT NULL, `custom2` varchar(32) NOT NULL, `custom3` varchar(32) NOT NULL, date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `single_record` (`auth`, `map`, `style`, `track`));");
+	Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `round` (`id` int(11) NOT NULL AUTO_INCREMENT, `map` varchar(32) NOT NULL, `auth` varchar(32) NOT NULL, `time` float NOT NULL, `jumps` int(11) NOT NULL, `style` int(11) NOT NULL, `track` int(11) NOT NULL, `name` varchar(64) NOT NULL, `finishcount` int(11) NOT NULL, `stage` int(11) NOT NULL, `fpsmax` int(11) NOT NULL, `jumpacc` float NOT NULL, `strafes` int(11) NOT NULL, `strafeacc` float NOT NULL, `avgspeed` float NOT NULL, `maxspeed` float NOT NULL, `finishspeed` float NOT NULL, `flashbangcount` int(11) NULL, `rank` int(11) NOT NULL, `replaypath` varchar(32) NOT NULL, `custom1` varchar(32) NULL, `custom2` varchar(32) NULL, `custom3` varchar(32) NULL, date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `single_record` (`auth`, `map`, `style`, `track`));");
 	SQL_SetCharset(g_hSQL, "utf8");
 	Timer_LogError("[timer-mysql.smx] Query: %s", query);
 	SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
@@ -399,6 +385,23 @@ stock InstallUpdates()
 		
 		// Rename levelprocess to stage
 		Format(query, sizeof(query), "ALTER TABLE round CHANGE levelprocess stage int(11);");
+		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
+	}
+	
+	Format(update_version, sizeof(update_version), "2.2.1.1");
+	if(CheckVersionOutdated(g_DB_Version, update_version))
+	{
+		Timer_LogError("[timer-mysql.smx] Executing updates for v%s: Custom field default fix", update_version);
+		
+		// custom field default fix
+		Format(query, sizeof(query), "ALTER TABLE `round` MODIFY `custom1` DEFAULT 0;");
+		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
+		Format(query, sizeof(query), "ALTER TABLE `round` MODIFY `custom2` DEFAULT 0;");
+		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
+		Format(query, sizeof(query), "ALTER TABLE `round` MODIFY `custom3` DEFAULT 0;");
 		Timer_LogError("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	}

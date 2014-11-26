@@ -164,20 +164,17 @@
 	
 	"World Record Menu Title"
 	{
-		"#format"		"{1:s}"
-		"nl"			"Wereld Records voor {1}"
+		"nl"			"Wereld Records"
 	}
 	
 	"Bonus World Record Menu Title"
 	{
-		"#format"		"{1:s}"
-		"nl"			"Bonus Wereld Records voor {1}"
+		"nl"			"Bonus Wereld Records"
 	}
 	
 	"Short World Record Menu Title"
 	{
-		"#format"		"{1:s}"
-		"nl"			"Korte World Records voor {1}"
+		"nl"			"Korte World Records"
 	}
 	
 	"World Record Loading"
@@ -476,5 +473,36 @@
 	"Hide Disabled"
 	{
 		"nl"			"Andere spelers zijn nu zichtbaar."
+	}
+	
+	"There is no bonus in this map"
+	{
+		"nl"			"There is no bonus in this map."
+	}
+	
+	"Multi bhop not available"
+	{
+		"nl"			"Multihop and Nohop are not available on this map."
+	}
+	
+	"No styles enabled"
+	{
+		"nl"			"No styles enabled."
+	}
+	
+	"You failed vegas mission"
+	{
+		"nl"			"You failed vegas mission. You need to restart to collect all vegas plattforms."
+	}
+	
+	"Vegas won"
+	{
+		"#format"		"{1:s},{2:d}"
+		"nl"			"{1} collected all vegas plattforms and got {2} points for completing vegas mission."
+	}
+	
+	"Vegas final game"
+	{
+		"nl"			"This was the last vegas mission until mapchange!"
 	}
 }

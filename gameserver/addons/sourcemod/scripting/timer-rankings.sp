@@ -150,6 +150,8 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 	
 	CreateNative("Timer_GetPoints", Native_GetPoints);
 	CreateNative("Timer_GetPointRank", Native_GetPointRank);
+	CreateNative("Timer_GetTag", Native_GetTag);
+	CreateNative("Timer_GetChatTag", Native_GetChatTag);
 	CreateNative("Timer_SetPoints", Native_SetPoints);
 	CreateNative("Timer_AddPoints", Native_AddPoints);
 	CreateNative("Timer_RemovePoints", Native_RemovePoints);
@@ -270,6 +272,18 @@ public OnPluginStart()
 	RegServerCmd("timer_rankingsdump", Command_PrintRanks, "Generates a dump file in /logs/ that contains all definitions and rankings.");
 	
 	g_bSimpleChatProcessor = LibraryExists("scp");
+	
+	g_hSQL = Handle:Timer_SqlGetConnection();
+	
+	if (g_hSQL == INVALID_HANDLE || g_bLateLoad)
+	{
+		ConnectSQL();
+	}
+	
+	if (g_hSQL == INVALID_HANDLE)
+	{
+		CreateTimer(0.1, Timer_SQLReconnect, _ , TIMER_FLAG_NO_MAPCHANGE);
+	}
 }
 
 public OnLibraryAdded(const String:name[])
@@ -369,26 +383,7 @@ public OnCVarChange(Handle:cvar, const String:oldvalue[], const String:newvalue[
 
 public OnConfigsExecuted()
 {
-	if(!g_iEnabled)
-		return;
-
 	Parse_Points();
-	
-	if (g_hSQL == INVALID_HANDLE || g_bLateLoad)
-	{
-		ConnectSQL();
-	}
-	
-	if (g_hSQL == INVALID_HANDLE)
-	{
-		CreateTimer(0.1, Timer_SQLReconnect, _ , TIMER_FLAG_NO_MAPCHANGE);
-		return;
-	}
-	
-	/*
-	if(g_hSQL == INVALID_HANDLE && (g_iPositionMethod == 0 || g_iPositionMethod == 1))
-		SQL_TConnect(SQL_Connect_Database, "timer");
-	*/
 }
 
 public OnTimerSqlConnected(Handle:sql)
@@ -412,7 +407,7 @@ ConnectSQL()
 		CreateTimer(0.1, Timer_SQLReconnect, _ , TIMER_FLAG_NO_MAPCHANGE);
 	else
 	{
-		Timer_LogError("RANKINGS CONNECTED");
+		SQL_TQuery(g_hSQL, CallBack_Total, "SELECT COUNT(*) FROM `ranks`", _, DBPrio_Low);
 		
 		for(new i = 1; i <= MaxClients; i++)
 		{
@@ -426,6 +421,10 @@ ConnectSQL()
 					g_sAuth[i][6] = '0';
 					if(!g_bLoadedCookies[i] && AreClientCookiesCached(i))
 						LoadClientData(i);
+					
+					decl String:sQuery[192];
+					FormatEx(sQuery, sizeof(sQuery), "SELECT `points` FROM `ranks` WHERE `auth` = '%s'", g_sAuth[i]);
+					SQL_TQuery(g_hSQL, CallBack_ClientConnect, sQuery, GetClientUserId(i), DBPrio_Low);
 				}
 			}
 		}
@@ -1025,9 +1024,6 @@ public Action:OnChatMessage(&author, Handle:recipients, String:name[], String:me
 	if(!g_iEnabled || !g_bAuthed[author] || !g_iDisplayMethod)
 		return Plugin_Continue;
 	
-	if(!g_bSimpleChatProcessor)
-		return Plugin_Continue;
-	
 	if(g_iPositionMethod == 2)
 	{
 		UpdateRankIndexbyRecordTime(author);
@@ -1272,16 +1268,6 @@ UpdateClientStars(client)
 			CS_SetMVPCount(client, GetArrayCell(g_hCfgArray_DisplayStars, g_iCurrentIndex[client]));
 		}
 	}
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-public SQL_Connect_Database(Handle:owner, Handle:hndl, const String:error[], any:data)
-{
-	SQL_TQuery(g_hSQL, CallBack_Names, "SET NAMES  'utf8'", _, DBPrio_High);
-	SQL_TQuery(g_hSQL, CallBack_Creation, "CREATE TABLE IF NOT EXISTS `ranks` (`auth` varchar(24) NOT NULL PRIMARY KEY, `points` int(11) NOT NULL default 0, `lastname` varchar(65) NOT NULL default '', `lastplay` int(11) NOT NULL default 0);");
-
-	SQL_TQuery(g_hSQL, CallBack_Total, "SELECT COUNT(*) FROM `ranks`", _, DBPrio_Low);
 }
 
 public CallBack_Total(Handle:owner, Handle:hndl, const String:error[], any:ref)
@@ -2606,6 +2592,20 @@ public Native_GetPoints(Handle:plugin, numParams)
 public Native_GetPointRank(Handle:plugin, numParams)
 {
 	return g_iCurrentRank[GetNativeCell(1)];
+}
+
+public Native_GetTag(Handle:plugin, numParams)
+{
+	decl String:sTagBuffer[128];
+	GetArrayString(g_hCfgArray_DisplayTag, g_iCurrentIndex[GetNativeCell(3)], sTagBuffer, sizeof(sTagBuffer));
+	SetNativeString(1, sTagBuffer, GetNativeCell(2));
+}
+
+public Native_GetChatTag(Handle:plugin, numParams)
+{
+	decl String:sChatTagBuffer[128];
+	GetArrayString(g_hCfgArray_DisplayChat, g_iCurrentIndex[GetNativeCell(3)], sChatTagBuffer, sizeof(sChatTagBuffer));
+	SetNativeString(1, sChatTagBuffer, GetNativeCell(2));
 }
 
 public Native_SetPoints(Handle:plugin, numParams)
