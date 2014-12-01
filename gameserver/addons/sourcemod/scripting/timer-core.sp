@@ -150,7 +150,6 @@ public OnPluginStart()
 	
 	LoadTranslations("timer.phrases");
 	
-	//RegConsoleCmd("sm_stop", Command_Stop);
 	if(g_Settings[PauseEnable])
 	{ 
 		RegConsoleCmd("sm_pause", Command_Pause);
@@ -164,8 +163,6 @@ public OnPluginStart()
 	HookEvent("player_team", Event_StopTimer);
 	HookEvent("player_spawn", Event_StopTimer);
 	HookEvent("player_disconnect", Event_StopTimer);
-	
-	AutoExecConfig(true, "timer/timer-core");
 	
 
 	g_timerLogging = LibraryExists("timer-logging");
