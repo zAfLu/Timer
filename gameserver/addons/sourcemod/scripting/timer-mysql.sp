@@ -129,6 +129,7 @@ public ConnectSQLCallback(Handle:owner, Handle:hndl, const String:error[], any:d
 	
 	if (StrEqual(driver, "mysql", false))
 	{
+		SQL_SetCharset(g_hSQL, "utf8");
 		SQL_TQuery(g_hSQL, CreateSQLTableCallback, "CREATE TABLE IF NOT EXISTS `settings` (`key` varchar(32) NOT NULL, `setting` varchar(256) NOT NULL, PRIMARY KEY (`key`));");
 	}
 	else if (StrEqual(driver, "sqlite", false))
@@ -277,39 +278,35 @@ stock InstallNew()
 	decl String:query[2048];
 	
 	Format(query, sizeof(query), "INSERT INTO `settings`(`key`, `setting`) VALUES ('db_version', '%s');", g_Version);
-	Timer_LogError("[timer-mysql.smx] Query: %s", query);
+	Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 	SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	
 	Format(query, sizeof(query), "INSERT INTO `settings`(`key`, `setting`) VALUES ('setup', '%s');", date);
-	Timer_LogError("[timer-mysql.smx] Query: %s", query);
+	Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 	SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	
 	Format(query, sizeof(query), "INSERT INTO `settings`(`key`, `setting`) VALUES ('last_update', '%s');", date);
-	Timer_LogError("[timer-mysql.smx] Query: %s", query);
+	Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 	SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	
 	/* Create ROUND table */ 
 	Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `round` (`id` int(11) NOT NULL AUTO_INCREMENT, `map` varchar(32) NOT NULL, `auth` varchar(32) NOT NULL, `time` float NOT NULL, `jumps` int(11) NOT NULL, `style` int(11) NOT NULL, `track` int(11) NOT NULL, `name` varchar(64) NOT NULL, `finishcount` int(11) NOT NULL, `stage` int(11) NOT NULL, `fpsmax` int(11) NOT NULL, `jumpacc` float NOT NULL, `strafes` int(11) NOT NULL, `strafeacc` float NOT NULL, `avgspeed` float NOT NULL, `maxspeed` float NOT NULL, `finishspeed` float NOT NULL, `flashbangcount` int(11) NULL, `rank` int(11) NOT NULL, `replaypath` varchar(32) NOT NULL, `custom1` varchar(32) NULL, `custom2` varchar(32) NULL, `custom3` varchar(32) NULL, date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `single_record` (`auth`, `map`, `style`, `track`));");
-	SQL_SetCharset(g_hSQL, "utf8");
-	Timer_LogError("[timer-mysql.smx] Query: %s", query);
+	Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 	SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	
 	/* Create MAPZONE table */ 
 	Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `mapzone` (`id` int(11) NOT NULL AUTO_INCREMENT, `type` int(11) NOT NULL, `level_id` int(11) NOT NULL, `point1_x` float NOT NULL, `point1_y` float NOT NULL, `point1_z` float NOT NULL, `point2_x` float NOT NULL, `point2_y` float NOT NULL, `point2_z` float NOT NULL, `map` varchar(64) NOT NULL, `name` varchar(32) NOT NULL, PRIMARY KEY (`id`));");
-	SQL_SetCharset(g_hSQL, "utf8");
-	Timer_LogError("[timer-mysql.smx] Query: %s", query);
+	Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 	SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	
 	/* Create MAPTIER table */ 
 	Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `maptier` (`id` int(11) NOT NULL AUTO_INCREMENT, `map` varchar(32) NOT NULL, `track` int(11) NOT NULL, `tier` int(11) NOT NULL, `stagecount` int(11) NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `single_record` (`map`, `track`));");
-	SQL_SetCharset(g_hSQL, "utf8");
-	Timer_LogError("[timer-mysql.smx] Query: %s", query);
+	Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 	SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	
 	/* Create RANKS table */ 
 	Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `ranks` (`auth` varchar(24) NOT NULL PRIMARY KEY, `points` int(11) NOT NULL default 0, `lastname` varchar(65) NOT NULL default '', `lastplay` int(11) NOT NULL default 0);");
-	SQL_SetCharset(g_hSQL, "utf8");
-	Timer_LogError("[timer-mysql.smx] Query: %s", query);
+	Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 	SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	
 	g_DatabaseReady = true;
@@ -321,8 +318,8 @@ stock InstallUpdates()
 	
 	decl String:query[2048];
 	
-	Timer_LogError("[timer-mysql.smx] ############################################################");
-	Timer_LogError("[timer-mysql.smx] MySQL v%s is outdated.", g_DB_Version);
+	Timer_LogInfo("[timer-mysql.smx] ############################################################");
+	Timer_LogInfo("[timer-mysql.smx] MySQL v%s is outdated.", g_DB_Version);
 	
 	Format(update_version, sizeof(update_version), "2.1.4.7");
 	if(CheckVersionOutdated(g_DB_Version, update_version))
@@ -330,21 +327,21 @@ stock InstallUpdates()
 		Timer_LogError("[timer-mysql.smx] Executing updates for v%s: Levelprocess fix", update_version);
 		
 		Format(query, sizeof(query), "UPDATE `round` SET `levelprocess` = 999 WHERE `bonus` = 0 AND `levelprocess` < 1;");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 		
 		Format(query, sizeof(query), "UPDATE `round` SET `levelprocess` = 1999 WHERE `bonus` = 1 AND `levelprocess` < 1;");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 		
 		Format(query, sizeof(query), "UPDATE `round` SET `levelprocess` = 500 WHERE `bonus` = 2 AND `levelprocess` < 1;");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 		
-		Timer_LogError("[timer-mysql.smx] Executing updates for v%s: Bonus start fix", update_version);
+		Timer_LogInfo("[timer-mysql.smx] Executing updates for v%s: Bonus start fix", update_version);
 		
 		Format(query, sizeof(query), "UPDATE mapzone SET level_id = 1001 WHERE level_id = 1000");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	}
 	
@@ -355,11 +352,11 @@ stock InstallUpdates()
 		
 		// flashbangcount fix
 		Format(query, sizeof(query), "ALTER TABLE `round` MODIFY `flashbangcount` DEFAULT 0;");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 		
 		Format(query, sizeof(query), "UPDATE `round` SET `flashbangcount` = 0 WHERE `flashbangcount` < 1;");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	}
 	
@@ -371,21 +368,21 @@ stock InstallUpdates()
 		
 		// Rename bonus to track
 		Format(query, sizeof(query), "ALTER TABLE round CHANGE bonus track int(11);");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 		
 		Format(query, sizeof(query), "ALTER TABLE maptier CHANGE bonus track int(11);");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 		
 		// Rename physicsdifficulty to style
 		Format(query, sizeof(query), "ALTER TABLE round CHANGE physicsdifficulty style int(11);");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 		
 		// Rename levelprocess to stage
 		Format(query, sizeof(query), "ALTER TABLE round CHANGE levelprocess stage int(11);");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	}
 	
@@ -396,13 +393,42 @@ stock InstallUpdates()
 		
 		// custom field default fix
 		Format(query, sizeof(query), "ALTER TABLE `round` MODIFY `custom1` DEFAULT 0;");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 		Format(query, sizeof(query), "ALTER TABLE `round` MODIFY `custom2` DEFAULT 0;");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 		Format(query, sizeof(query), "ALTER TABLE `round` MODIFY `custom3` DEFAULT 0;");
-		Timer_LogError("[timer-mysql.smx] Query: %s", query);
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
+		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
+	}
+	
+	Format(update_version, sizeof(update_version), "2.3.0.2");
+	if(CheckVersionOutdated(g_DB_Version, update_version))
+	{
+		Timer_LogError("[timer-mysql.smx] Executing updates for v%s: Custom field default fix", update_version);
+		
+		// collation fix
+		Format(query, sizeof(query), "alter table maptier convert to character set utf8 collate utf8_general_ci;");
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
+		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
+		Format(query, sizeof(query), "alter table mapzone convert to character set utf8 collate utf8_general_ci;");
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
+		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
+		Format(query, sizeof(query), "alter table online convert to character set utf8 collate utf8_general_ci;");
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
+		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
+		Format(query, sizeof(query), "alter table ranks convert to character set utf8 collate utf8_general_ci;");
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
+		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
+		Format(query, sizeof(query), "alter table ranks_geo convert to character set utf8 collate utf8_general_ci;");
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
+		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
+		Format(query, sizeof(query), "alter table round convert to character set utf8 collate utf8_general_ci;");
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
+		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
+		Format(query, sizeof(query), "alter table settings convert to character set utf8 collate utf8_general_ci;");
+		Timer_LogInfo("[timer-mysql.smx] Query: %s", query);
 		SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	}
 	
@@ -414,7 +440,7 @@ stock InstallUpdates()
 	Format(query, sizeof(query), "UPDATE `settings` SET `setting` = \"%s\" WHERE `key` = \"db_version\";", g_Version);
 	SQL_TQuery(g_hSQL, EmptyCallback, query, _, DBPrio_High);
 	Timer_LogInfo("[timer-mysql.smx] MySQL v%s version updated.", g_Version);
-	Timer_LogError("[timer-mysql.smx] ############################################################");
+	Timer_LogInfo("[timer-mysql.smx] ############################################################");
 	
 	g_DatabaseReady = true;
 }
