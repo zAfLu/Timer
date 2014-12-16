@@ -221,8 +221,6 @@ Menu_Latest(client, type)
 			
 			if(g_latestRecords[type][i][RecordTrack] == TRACK_BONUS)
 				Format(buffer, sizeof(buffer), "%s [B]", buffer);
-			else if(g_latestRecords[type][i][RecordTrack] == TRACK_SHORT)
-				Format(buffer, sizeof(buffer), "%s [S]", buffer);
 			
 			Format(buffer, sizeof(buffer), "%s - %s", buffer, g_latestRecords[type][i][RecordName]);
 			
