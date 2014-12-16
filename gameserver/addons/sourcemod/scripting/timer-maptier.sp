@@ -13,8 +13,8 @@ new Handle:g_hSQL;
 
 new String:g_currentMap[32];
 
-new g_maptier[2];
-new g_stagecount[2];
+new g_maptier[MAX_TRACKS];
+new g_stagecount[MAX_TRACKS];
 
 new Handle:g_OnMapTiersLoaded;
 
@@ -61,10 +61,11 @@ public OnMapStart()
 	ConnectSQL();
 	GetCurrentMap(g_currentMap, sizeof(g_currentMap));
 	
-	g_maptier[0] = 0;
-	g_maptier[1] = 0;
-	g_stagecount[0] = 0;
-	g_stagecount[1] = 0;
+	for(new track = 0; track < MAX_TRACKS; track++) 
+	{
+		g_maptier[track] = 0;
+		g_stagecount[track] = 0;
+	}
 	
 	if (g_hSQL != INVALID_HANDLE) LoadMapTier();
 }
@@ -105,18 +106,15 @@ LoadMapTier()
 	if (g_hSQL != INVALID_HANDLE)
 	{
 		decl String:query[128];
-		FormatEx(query, sizeof(query), "SELECT tier, stagecount FROM maptier WHERE map = '%s' AND track = 0", g_currentMap);
-		SQL_TQuery(g_hSQL, LoadTierCallback, query, 0, DBPrio_Normal);
-		
-		FormatEx(query, sizeof(query), "SELECT tier, stagecount FROM maptier WHERE map = '%s' AND track = 1", g_currentMap);
-		SQL_TQuery(g_hSQL, LoadTierCallback, query, 1, DBPrio_Normal); 
+		FormatEx(query, sizeof(query), "SELECT track, tier, stagecount FROM maptier WHERE map = '%s'", g_currentMap);
+		SQL_TQuery(g_hSQL, LoadTierCallback, query, _, DBPrio_Normal);
 		
 		Format(query, sizeof(query), "SELECT map, track, tier, stagecount FROM maptier");
 		SQL_TQuery(g_hSQL, LoadTierAllCallback, query, _, DBPrio_Normal);
 	}
 }
 
-public LoadTierCallback(Handle:owner, Handle:hndl, const String:error[], any:track)
+public LoadTierCallback(Handle:owner, Handle:hndl, const String:error[], any:data)
 {
 	if (hndl == INVALID_HANDLE)
 	{
@@ -126,22 +124,25 @@ public LoadTierCallback(Handle:owner, Handle:hndl, const String:error[], any:tra
 	
 	while (SQL_FetchRow(hndl))
 	{
+		new track = SQL_FetchInt(hndl, 0);
 		g_maptier[track] = 0;
-		g_maptier[track] = SQL_FetchInt(hndl, 0);
-		g_stagecount[track] = SQL_FetchInt(hndl, 1);
-	}
+		g_maptier[track] = SQL_FetchInt(hndl, 1);
+		g_stagecount[track] = SQL_FetchInt(hndl, 2);
 	
-	if (g_maptier[track] == 0)
-	{
-		decl String:query[128];
-		FormatEx(query, sizeof(query), "INSERT IGNORE INTO maptier (map, track, tier, stagecount) VALUES ('%s','%d','1', '1');", g_currentMap, track);
-
-		if (g_hSQL == INVALID_HANDLE)
-			ConnectSQL();
-		
-		if (g_hSQL != INVALID_HANDLE)
+		if (g_maptier[track] == 0)
 		{
-			SQL_TQuery(g_hSQL, InsertTierCallback, query, track, DBPrio_Normal);
+			decl String:query[128];
+			FormatEx(query, sizeof(query), "INSERT IGNORE INTO maptier (map, track, tier, stagecount) VALUES ('%s','%d','1', '1');", g_currentMap, track);
+
+			if (g_hSQL == INVALID_HANDLE)
+				ConnectSQL();
+			
+			if (g_hSQL != INVALID_HANDLE)
+			{
+				SQL_TQuery(g_hSQL, InsertTierCallback, query, track, DBPrio_Normal);
+			}
+			
+			g_maptier[track] = 1;
 		}
 	}
 }
@@ -183,6 +184,26 @@ public LoadTierAllCallback(Handle:owner, Handle:hndl, const String:error[], any:
 		{
 			KvSetNum(g_hMaps, "tier_bonus", tier);
 			KvSetNum(g_hMaps, "stagecount_bonus", stagecount);
+		}
+		else if(track == TRACK_BONUS2)
+		{
+			KvSetNum(g_hMaps, "tier_bonus2", tier);
+			KvSetNum(g_hMaps, "stagecount_bonus2", stagecount);
+		}
+		else if(track == TRACK_BONUS3)
+		{
+			KvSetNum(g_hMaps, "tier_bonus3", tier);
+			KvSetNum(g_hMaps, "stagecount_bonus3", stagecount);
+		}
+		else if(track == TRACK_BONUS4)
+		{
+			KvSetNum(g_hMaps, "tier_bonus4", tier);
+			KvSetNum(g_hMaps, "stagecount_bonus4", stagecount);
+		}
+		else if(track == TRACK_BONUS5)
+		{
+			KvSetNum(g_hMaps, "tier_bonus5", tier);
+			KvSetNum(g_hMaps, "stagecount_bonus5", stagecount);
 		}
 		
 		KvRewind(g_hMaps);
@@ -301,8 +322,23 @@ public Native_GetMapTier(Handle:plugin, numParams)
 		{
 			tier = KvGetNum(hMaps, "tier_bonus");
 		}
+		else if(track == TRACK_BONUS2)
+		{
+			tier = KvGetNum(hMaps, "tier_bonus2");
+		}
+		else if(track == TRACK_BONUS3)
+		{
+			tier = KvGetNum(hMaps, "tier_bonus3");
+		}
+		else if(track == TRACK_BONUS4)
+		{
+			tier = KvGetNum(hMaps, "tier_bonus4");
+		}
+		else if(track == TRACK_BONUS5)
+		{
+			tier = KvGetNum(hMaps, "tier_bonus5");
+		}
 	}
-	
 	CloseHandle(hMaps);
 	
 	return tier;
@@ -334,6 +370,22 @@ public Native_GetMapStageCount(Handle:plugin, numParams)
 		{
 			stagecount = KvGetNum(hMaps, "stagecount_bonus");
 		}
+		else if(track == TRACK_BONUS2)
+		{
+			stagecount = KvGetNum(hMaps, "stagecount_bonus2");
+		}
+		else if(track == TRACK_BONUS3)
+		{
+			stagecount = KvGetNum(hMaps, "stagecount_bonus3");
+		}
+		else if(track == TRACK_BONUS4)
+		{
+			stagecount = KvGetNum(hMaps, "stagecount_bonus4");
+		}
+		else if(track == TRACK_BONUS5)
+		{
+			stagecount = KvGetNum(hMaps, "stagecount_bonus5");
+		}
 	}
 	CloseHandle(hMaps);
 	
@@ -343,10 +395,18 @@ public Native_GetMapStageCount(Handle:plugin, numParams)
 public Native_UpdateStageCount(Handle:plugin, numParams)
 {
 	new track = GetNativeCell(1);
-	if(track == 0)
+	if(track == TRACK_NORMAL)
 		g_stagecount[track] = Timer_GetMapzoneCount(ZtLevel)+1;
-	else if(track == 1)
+	else if(track == TRACK_BONUS)
 		g_stagecount[track] = Timer_GetMapzoneCount(ZtBonusLevel)+1;
+	else if(track == TRACK_BONUS2)
+		g_stagecount[track] = Timer_GetMapzoneCount(ZtBonus2Level)+1;
+	else if(track == TRACK_BONUS3)
+		g_stagecount[track] = Timer_GetMapzoneCount(ZtBonus3Level)+1;
+	else if(track == TRACK_BONUS4)
+		g_stagecount[track] = Timer_GetMapzoneCount(ZtBonus4Level)+1;
+	else if(track == TRACK_BONUS5)
+		g_stagecount[track] = Timer_GetMapzoneCount(ZtBonus5Level)+1;
 	
 	decl String:query[256];
 	FormatEx(query, sizeof(query), "UPDATE maptier SET stagecount = '%d' WHERE map = '%s' AND track = '%d'", g_stagecount[track], g_currentMap, track);
