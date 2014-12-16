@@ -70,9 +70,6 @@ new g_startColor[4] = { 0, 255, 0, 255 };
 new Handle:g_endMapZoneColor = INVALID_HANDLE;
 new g_endColor[4] = { 255, 0, 0, 255 };
 
-new Handle:g_shortEndZoneColor = INVALID_HANDLE;
-new g_shortendColor[4] = { 255, 99, 25, 255 };
-
 new Handle:g_endBonusZoneColor = INVALID_HANDLE;
 new g_bonusendColor[4] = { 138, 0, 184, 255 };
 
@@ -115,9 +112,6 @@ new String:g_sBeamBonusStartZonePath[256];
 new Handle:g_BeamBonusEndZonePath = INVALID_HANDLE;
 new String:g_sBeamBonusEndZonePath[256];
 
-new Handle:g_BeamShortEndZonePath = INVALID_HANDLE;
-new String:g_sBeamShortEndZonePath[256];
-
 
 new Handle:Sound_TeleLast = INVALID_HANDLE;
 new String:SND_TELE_LAST[MAX_FILE_LEN];
@@ -137,7 +131,6 @@ new TopMenuObject:oMapZoneMenu;
 new g_mapZoneEditors[MAXPLAYERS+1][MapZoneEditor];
 
 new precache_laser_default;
-new precache_laser_short_end;
 new precache_laser_bonus_end;
 new precache_laser_bonus_start;
 new precache_laser_end;
@@ -211,11 +204,9 @@ public OnPluginStart()
 	g_glitch4ZoneColor = CreateConVar("timer_glitch4color", "0 255 255 255", "The color of the glitch4 zone.");
 	g_levelZoneColor = CreateConVar("timer_levelcolor", "0 255 0 0", "The color of the level zone.");
 	g_bonusLevelZoneColor = CreateConVar("timer_bonuslevelcolor", "0 0 255 0", "The color of the bonus level zone.");
-	g_shortEndZoneColor = CreateConVar("timer_shortendcolor", "255 99 25 255", "The color of the short end zone.");
-	g_freeStyleZoneColor = CreateConVar("timer_freestylecolor", "20 20 255 200", "The color of the short end zone.");
+	g_freeStyleZoneColor = CreateConVar("timer_freestylecolor", "20 20 255 200", "The color of the freestyle zone.");
 	
 	g_BeamDefaultPath = CreateConVar("timer_beam_sprite_default", "materials/sprites/laserbeam", "The laser sprite for zones (default sprite).");
-	g_BeamShortEndZonePath = CreateConVar("timer_beam_sprite_short_end", "materials/sprites/laserbeam", "The laser sprite for zones (short end zone).");
 	g_BeamBonusEndZonePath = CreateConVar("timer_beam_sprite_bonus_end", "materials/sprites/laserbeam", "The laser sprite for zones (bonus end zone).");
 	g_BeamBonusStartZonePath = CreateConVar("timer_beam_sprite_bonus_start", "materials/sprites/laserbeam", "The laser sprite for zones (bonus start zone).");
 	g_BeamEndZonePath = CreateConVar("timer_beam_sprite_end", "materials/sprites/laserbeam", "The laser sprite for zones (end zone).");
@@ -238,13 +229,12 @@ public OnPluginStart()
 	HookConVarChange(g_glitch4ZoneColor, Action_OnSettingsChange);
 	HookConVarChange(g_levelZoneColor, Action_OnSettingsChange);
 	HookConVarChange(g_bonusLevelZoneColor, Action_OnSettingsChange);
-	HookConVarChange(g_shortEndZoneColor, Action_OnSettingsChange);
 	
 	HookConVarChange(Sound_TeleLast, Action_OnSettingsChange);
 	HookConVarChange(Sound_TeleNext, Action_OnSettingsChange);
 	HookConVarChange(Sound_TimerStart, Action_OnSettingsChange);
 	
-	HookConVarChange(g_BeamShortEndZonePath, Action_OnSettingsChange);
+	
 	HookConVarChange(g_BeamBonusEndZonePath, Action_OnSettingsChange);
 	HookConVarChange(g_BeamBonusStartZonePath, Action_OnSettingsChange);
 	HookConVarChange(g_BeamDefaultPath, Action_OnSettingsChange);
@@ -291,6 +281,14 @@ public OnPluginStart()
 		RegConsoleCmd("sm_br", Command_BonusRestart);
 		RegConsoleCmd("sm_b", Command_BonusRestart);
 		RegConsoleCmd("sm_bonus", Command_BonusRestart);
+		RegConsoleCmd("sm_b2", Command_Bonus2Restart);
+		RegConsoleCmd("sm_bonus2", Command_Bonus2Restart);
+		RegConsoleCmd("sm_b3", Command_Bonus3Restart);
+		RegConsoleCmd("sm_bonus3", Command_Bonus3Restart);
+		RegConsoleCmd("sm_b4", Command_Bonus4Restart);
+		RegConsoleCmd("sm_bonus4", Command_Bonus4Restart);
+		RegConsoleCmd("sm_b5", Command_Bonus5Restart);
+		RegConsoleCmd("sm_bonus5", Command_Bonus5Restart);
 	}
 	
 	if(g_Settings[StuckEnable]) RegConsoleCmd("sm_stuck", Command_Stuck);
@@ -688,6 +686,10 @@ DisplaySelectZoneTypeMenu(client, category)
 		AddMenuItem(menu, "cat_speed", "Speed");
 		AddMenuItem(menu, "cat_block", "Block Keys");
 		AddMenuItem(menu, "cat_other", "Other");
+		AddMenuItem(menu, "cat_timer_bonus2", "Timer (Bonus2)");
+		AddMenuItem(menu, "cat_timer_bonus3", "Timer (Bonus3)");
+		AddMenuItem(menu, "cat_timer_bonus4", "Timer (Bonus4)");
+		AddMenuItem(menu, "cat_timer_bonus5", "Timer (Bonus5)");
 		AddMenuItem(menu, "adjust", "Back");
 	}
 	else if(category == 1)
@@ -696,7 +698,6 @@ DisplaySelectZoneTypeMenu(client, category)
 		AddMenuItem(menu, "checkpoint", "Checkpoint");
 		AddMenuItem(menu, "start", "Start");
 		AddMenuItem(menu, "end", "End");
-		AddMenuItem(menu, "short_end", "Short End");
 		AddMenuItem(menu, "back", "Back");
 	}
 	else if(category == 2)
@@ -770,6 +771,38 @@ DisplaySelectZoneTypeMenu(client, category)
 		//AddMenuItem(menu, "bounceback", "Bounce Back");
 		AddMenuItem(menu, "back", "Back");
 	}
+	else if(category == 10)
+	{
+		AddMenuItem(menu, "bonus2level", "Bonus2 Level");
+		AddMenuItem(menu, "bonus2checkpoint", "Bonus2 Checkpoint");
+		AddMenuItem(menu, "bonus2start", "Bonus2 Start");
+		AddMenuItem(menu, "bonus2end", "Bonus2 End");
+		AddMenuItem(menu, "back", "Back");
+	}
+	else if(category == 11)
+	{
+		AddMenuItem(menu, "bonus3level", "Bonus3 Level");
+		AddMenuItem(menu, "bonus3checkpoint", "Bonus3 Checkpoint");
+		AddMenuItem(menu, "bonus3start", "Bonus3 Start");
+		AddMenuItem(menu, "bonus3end", "Bonus3 End");
+		AddMenuItem(menu, "back", "Back");
+	}
+	else if(category == 12)
+	{
+		AddMenuItem(menu, "bonus4level", "Bonus4 Level");
+		AddMenuItem(menu, "bonus4checkpoint", "Bonus4 Checkpoint");
+		AddMenuItem(menu, "bonus4start", "Bonus4 Start");
+		AddMenuItem(menu, "bonus4end", "Bonus4 End");
+		AddMenuItem(menu, "back", "Back");
+	}
+	else if(category == 13)
+	{
+		AddMenuItem(menu, "bonus5level", "Bonus5 Level");
+		AddMenuItem(menu, "bonus5checkpoint", "Bonus5 Checkpoint");
+		AddMenuItem(menu, "bonus5start", "Bonus5 Start");
+		AddMenuItem(menu, "bonus5end", "Bonus5 End");
+		AddMenuItem(menu, "back", "Back");
+	}
 	
 	SetMenuExitButton(menu, true);
 	DisplayMenu(menu, client, 360);
@@ -832,6 +865,22 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 			else if(StrEqual(info, "cat_other"))
 			{
 				DisplaySelectZoneTypeMenu(client, 9);
+			}
+			else if(StrEqual(info, "cat_timer_bonus2"))
+			{
+				DisplaySelectZoneTypeMenu(client, 10);
+			}
+			else if(StrEqual(info, "cat_timer_bonus3"))
+			{
+				DisplaySelectZoneTypeMenu(client, 11);
+			}
+			else if(StrEqual(info, "cat_timer_bonus4"))
+			{
+				DisplaySelectZoneTypeMenu(client, 12);
+			}
+			else if(StrEqual(info, "cat_timer_bonus5"))
+			{
+				DisplaySelectZoneTypeMenu(client, 13);
 			}
 			else if(StrEqual(info, "start"))
 			{
@@ -925,6 +974,62 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 				LvlID = LEVEL_BONUS_END;
 				valid = true;
 			}
+			else if(StrEqual(info, "bonus2start"))
+			{
+				zonetype = ZtBonus2Start;
+				ZoneName = "Bonus2Start";
+				LvlID = LEVEL_BONUS2_START;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus2end"))
+			{
+				zonetype = ZtBonus2End;
+				ZoneName = "Bonus2End";
+				LvlID = LEVEL_BONUS2_END;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus3start"))
+			{
+				zonetype = ZtBonus3Start;
+				ZoneName = "Bonus3Start";
+				LvlID = LEVEL_BONUS3_START;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus3end"))
+			{
+				zonetype = ZtBonus3End;
+				ZoneName = "Bonus3End";
+				LvlID = LEVEL_BONUS3_END;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus4start"))
+			{
+				zonetype = ZtBonus4Start;
+				ZoneName = "Bonus4Start";
+				LvlID = LEVEL_BONUS4_START;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus4end"))
+			{
+				zonetype = ZtBonus4End;
+				ZoneName = "Bonus4End";
+				LvlID = LEVEL_BONUS4_END;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus5start"))
+			{
+				zonetype = ZtBonus5Start;
+				ZoneName = "Bonus5Start";
+				LvlID = LEVEL_BONUS5_START;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus5end"))
+			{
+				zonetype = ZtBonus5End;
+				ZoneName = "Bonus5End";
+				LvlID = LEVEL_BONUS5_END;
+				valid = true;
+			}
 			else if(StrEqual(info, "bonuscheckpoint"))
 			{
 				zonetype = ZtBonusCheckpoint;
@@ -960,6 +1065,166 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 				hcount++;
 				
 				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus-Stage %d", hcount);
+				
+				LvlID = hcount;
+				ZoneName = lvlbuffer;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus2checkpoint"))
+			{
+				zonetype = ZtBonus2Checkpoint;
+				new String:lvlbuffer[32];
+				
+				new hcount = LEVEL_BONUS2_START;
+				for (new zone = 0; zone < g_mapZonesCount; zone++)
+				{
+					if(g_mapZones[zone][Type] != ZtBonus2Checkpoint && g_mapZones[zone][Type] != ZtBonus2Level) continue;
+					if(g_mapZones[zone][Level_Id] <= hcount) continue;
+					hcount = g_mapZones[zone][Level_Id];
+				}
+				hcount++;
+				
+				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus2-Checkpoint %d", hcount);
+				
+				LvlID = hcount;
+				ZoneName = lvlbuffer;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus2level"))
+			{
+				zonetype = ZtBonus2Checkpoint;
+				new String:lvlbuffer[32];
+				
+				new hcount = LEVEL_BONUS2_START;
+				for (new zone = 0; zone < g_mapZonesCount; zone++)
+				{
+					if(g_mapZones[zone][Type] != ZtBonus2Checkpoint && g_mapZones[zone][Type] != ZtBonus2Level) continue;
+					if(g_mapZones[zone][Level_Id] <= hcount) continue;
+					hcount = g_mapZones[zone][Level_Id];
+				}
+				hcount++;
+				
+				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus2-Stage %d", hcount);
+				
+				LvlID = hcount;
+				ZoneName = lvlbuffer;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus3checkpoint"))
+			{
+				zonetype = ZtBonus3Checkpoint;
+				new String:lvlbuffer[32];
+				
+				new hcount = LEVEL_BONUS3_START;
+				for (new zone = 0; zone < g_mapZonesCount; zone++)
+				{
+					if(g_mapZones[zone][Type] != ZtBonus3Checkpoint && g_mapZones[zone][Type] != ZtBonus3Level) continue;
+					if(g_mapZones[zone][Level_Id] <= hcount) continue;
+					hcount = g_mapZones[zone][Level_Id];
+				}
+				hcount++;
+				
+				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus3-Checkpoint %d", hcount);
+				
+				LvlID = hcount;
+				ZoneName = lvlbuffer;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus3level"))
+			{
+				zonetype = ZtBonus3Checkpoint;
+				new String:lvlbuffer[32];
+				
+				new hcount = LEVEL_BONUS3_START;
+				for (new zone = 0; zone < g_mapZonesCount; zone++)
+				{
+					if(g_mapZones[zone][Type] != ZtBonus3Checkpoint && g_mapZones[zone][Type] != ZtBonus3Level) continue;
+					if(g_mapZones[zone][Level_Id] <= hcount) continue;
+					hcount = g_mapZones[zone][Level_Id];
+				}
+				hcount++;
+				
+				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus3-Stage %d", hcount);
+				
+				LvlID = hcount;
+				ZoneName = lvlbuffer;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus4checkpoint"))
+			{
+				zonetype = ZtBonus4Checkpoint;
+				new String:lvlbuffer[32];
+				
+				new hcount = LEVEL_BONUS4_START;
+				for (new zone = 0; zone < g_mapZonesCount; zone++)
+				{
+					if(g_mapZones[zone][Type] != ZtBonus4Checkpoint && g_mapZones[zone][Type] != ZtBonus4Level) continue;
+					if(g_mapZones[zone][Level_Id] <= hcount) continue;
+					hcount = g_mapZones[zone][Level_Id];
+				}
+				hcount++;
+				
+				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus4-Checkpoint %d", hcount);
+				
+				LvlID = hcount;
+				ZoneName = lvlbuffer;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus4level"))
+			{
+				zonetype = ZtBonus4Checkpoint;
+				new String:lvlbuffer[32];
+				
+				new hcount = LEVEL_BONUS4_START;
+				for (new zone = 0; zone < g_mapZonesCount; zone++)
+				{
+					if(g_mapZones[zone][Type] != ZtBonus4Checkpoint && g_mapZones[zone][Type] != ZtBonus4Level) continue;
+					if(g_mapZones[zone][Level_Id] <= hcount) continue;
+					hcount = g_mapZones[zone][Level_Id];
+				}
+				hcount++;
+				
+				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus4-Stage %d", hcount);
+				
+				LvlID = hcount;
+				ZoneName = lvlbuffer;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus5checkpoint"))
+			{
+				zonetype = ZtBonus5Checkpoint;
+				new String:lvlbuffer[32];
+				
+				new hcount = LEVEL_BONUS5_START;
+				for (new zone = 0; zone < g_mapZonesCount; zone++)
+				{
+					if(g_mapZones[zone][Type] != ZtBonus5Checkpoint && g_mapZones[zone][Type] != ZtBonus5Level) continue;
+					if(g_mapZones[zone][Level_Id] <= hcount) continue;
+					hcount = g_mapZones[zone][Level_Id];
+				}
+				hcount++;
+				
+				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus5-Checkpoint %d", hcount);
+				
+				LvlID = hcount;
+				ZoneName = lvlbuffer;
+				valid = true;
+			}
+			else if(StrEqual(info, "bonus5level"))
+			{
+				zonetype = ZtBonus5Checkpoint;
+				new String:lvlbuffer[32];
+				
+				new hcount = LEVEL_BONUS5_START;
+				for (new zone = 0; zone < g_mapZonesCount; zone++)
+				{
+					if(g_mapZones[zone][Type] != ZtBonus5Checkpoint && g_mapZones[zone][Type] != ZtBonus5Level) continue;
+					if(g_mapZones[zone][Level_Id] <= hcount) continue;
+					hcount = g_mapZones[zone][Level_Id];
+				}
+				hcount++;
+				
+				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus5-Stage %d", hcount);
 				
 				LvlID = hcount;
 				ZoneName = lvlbuffer;
@@ -1109,13 +1374,6 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 			{
 				zonetype = ZtRestartBonusTimer;
 				ZoneName = "Restart Bonust";
-				valid = true;
-			}
-			else if(StrEqual(info, "short_end"))
-			{
-				zonetype = ZtShortEnd;
-				ZoneName = "Short End";
-				LvlID = 500;
 				valid = true;
 			}
 			else if(StrEqual(info, "reset"))
@@ -1295,6 +1553,46 @@ public Action:StartTouchTrigger(caller, activator)
 		
 		if(g_timerLjStats) SetLJMode(client, false);
 	}
+	else if (g_mapZones[zone][Type] == ZtBonus2Start)
+	{
+		g_iIgnoreEndTouchStart[client] = false;
+		g_iClientLastTrackZone[client] = zone;
+		
+		Timer_Stop(client, false);
+		Timer_SetTrack(client, TRACK_BONUS2);
+		
+		if(g_timerLjStats) SetLJMode(client, false);
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus3Start)
+	{
+		g_iIgnoreEndTouchStart[client] = false;
+		g_iClientLastTrackZone[client] = zone;
+		
+		Timer_Stop(client, false);
+		Timer_SetTrack(client, TRACK_BONUS3);
+		
+		if(g_timerLjStats) SetLJMode(client, false);
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus4Start)
+	{
+		g_iIgnoreEndTouchStart[client] = false;
+		g_iClientLastTrackZone[client] = zone;
+		
+		Timer_Stop(client, false);
+		Timer_SetTrack(client, TRACK_BONUS4);
+		
+		if(g_timerLjStats) SetLJMode(client, false);
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus5Start)
+	{
+		g_iIgnoreEndTouchStart[client] = false;
+		g_iClientLastTrackZone[client] = zone;
+		
+		Timer_Stop(client, false);
+		Timer_SetTrack(client, TRACK_BONUS5);
+		
+		if(g_timerLjStats) SetLJMode(client, false);
+	}
 	else if (g_mapZones[zone][Type] == ZtEnd)
 	{
 		if(!g_Settings[NoblockEnable])
@@ -1324,37 +1622,8 @@ public Action:StartTouchTrigger(caller, activator)
 						if (g_timerPhysics)
 							difficulty = Timer_GetStyle(client);
 						
-						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, 0);
+						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_NORMAL);
 					}
-				}
-			}
-		}
-	}
-	else if (g_mapZones[zone][Type] == ZtShortEnd)
-	{
-		if(mate == 0)
-		{
-			//has player noclip?
-			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
-			{
-				Timer_Stop(client, false);
-			}
-			else if(Timer_GetTrack(client) == TRACK_NORMAL)
-			{
-				g_iClientLastTrackZone[client] = zone;
-				
-				new bool:enabled = false;
-				new jumps = 0;
-				new Float:time;
-				new fpsmax;
-				
-				if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
-				{
-					new style = 0;
-					if (g_timerPhysics)
-						style = Timer_GetStyle(client);
-					
-					Timer_FinishRound(client, g_currentMap, time, jumps, style, fpsmax, 2);
 				}
 			}
 		}
@@ -1385,7 +1654,135 @@ public Action:StartTouchTrigger(caller, activator)
 						if (g_timerPhysics)
 							difficulty = Timer_GetStyle(client);
 						
-						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, 1);
+						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS);
+					}
+				}
+			}
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus2End)
+	{
+		if(mate == 0)
+		{
+			//has player noclip?
+			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			{
+				Timer_Stop(client, false);
+			}
+			else if(Timer_GetTrack(client) == TRACK_BONUS2)
+			{
+				g_iClientLastTrackZone[client] = zone;
+				
+				if (Timer_Stop(client, false))
+				{
+					new bool:enabled = false;
+					new jumps = 0;
+					new Float:time;
+					new fpsmax;
+					
+					if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
+					{
+						new difficulty = 0;
+						if (g_timerPhysics)
+							difficulty = Timer_GetStyle(client);
+						
+						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS2);
+					}
+				}
+			}
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus3End)
+	{
+		if(mate == 0)
+		{
+			//has player noclip?
+			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			{
+				Timer_Stop(client, false);
+			}
+			else if(Timer_GetTrack(client) == TRACK_BONUS3)
+			{
+				g_iClientLastTrackZone[client] = zone;
+				
+				if (Timer_Stop(client, false))
+				{
+					new bool:enabled = false;
+					new jumps = 0;
+					new Float:time;
+					new fpsmax;
+					
+					if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
+					{
+						new difficulty = 0;
+						if (g_timerPhysics)
+							difficulty = Timer_GetStyle(client);
+						
+						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS3);
+					}
+				}
+			}
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus4End)
+	{
+		if(mate == 0)
+		{
+			//has player noclip?
+			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			{
+				Timer_Stop(client, false);
+			}
+			else if(Timer_GetTrack(client) == TRACK_BONUS4)
+			{
+				g_iClientLastTrackZone[client] = zone;
+				
+				if (Timer_Stop(client, false))
+				{
+					new bool:enabled = false;
+					new jumps = 0;
+					new Float:time;
+					new fpsmax;
+					
+					if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
+					{
+						new difficulty = 0;
+						if (g_timerPhysics)
+							difficulty = Timer_GetStyle(client);
+						
+						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS4);
+					}
+				}
+			}
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus5End)
+	{
+		if(mate == 0)
+		{
+			//has player noclip?
+			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			{
+				Timer_Stop(client, false);
+			}
+			else if(Timer_GetTrack(client) == TRACK_BONUS5)
+			{
+				g_iClientLastTrackZone[client] = zone;
+				
+				if (Timer_Stop(client, false))
+				{
+					new bool:enabled = false;
+					new jumps = 0;
+					new Float:time;
+					new fpsmax;
+					
+					if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
+					{
+						new difficulty = 0;
+						if (g_timerPhysics)
+							difficulty = Timer_GetStyle(client);
+						
+						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS5);
 					}
 				}
 			}
@@ -1400,6 +1797,22 @@ public Action:StartTouchTrigger(caller, activator)
 		if(Timer_GetTrack(client) == TRACK_BONUS) 
 		{
 			Tele_Level(client, LEVEL_BONUS_START);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS2) 
+		{
+			Tele_Level(client, LEVEL_BONUS2_START);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS3) 
+		{
+			Tele_Level(client, LEVEL_BONUS3_START);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS4) 
+		{
+			Tele_Level(client, LEVEL_BONUS4_START);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS5) 
+		{
+			Tele_Level(client, LEVEL_BONUS5_START);
 		}
 		else
 		{
@@ -1418,6 +1831,22 @@ public Action:StartTouchTrigger(caller, activator)
 		if(Timer_GetTrack(client) == TRACK_BONUS) 
 		{
 			Tele_Level(client, LEVEL_BONUS_START);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS2) 
+		{
+			Tele_Level(client, LEVEL_BONUS2_START);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS3) 
+		{
+			Tele_Level(client, LEVEL_BONUS3_START);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS4) 
+		{
+			Tele_Level(client, LEVEL_BONUS4_START);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS5) 
+		{
+			Tele_Level(client, LEVEL_BONUS5_START);
 		}
 	}
 	else if (g_mapZones[zone][Type] == ZtLast)
@@ -1501,6 +1930,118 @@ public Action:StartTouchTrigger(caller, activator)
 	else if (g_mapZones[zone][Type] == ZtBonusCheckpoint)
 	{
 		if(Timer_GetTrack(client) == TRACK_BONUS)
+		{
+			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
+			g_iClientLastTrackZone[client] = zone;
+			
+			Call_StartForward(g_OnClientStartTouchBonusLevel);
+			Call_PushCell(client);
+			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
+			Call_PushCell(lastlevel);
+			Call_Finish();
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus2Level)
+	{
+		if(Timer_GetTrack(client) == TRACK_BONUS2)
+		{
+			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
+			g_iClientLastTrackZone[client] = zone;
+			
+			Call_StartForward(g_OnClientStartTouchBonusLevel);
+			Call_PushCell(client);
+			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
+			Call_PushCell(lastlevel);
+			Call_Finish();
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus2Checkpoint)
+	{
+		if(Timer_GetTrack(client) == TRACK_BONUS2)
+		{
+			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
+			g_iClientLastTrackZone[client] = zone;
+			
+			Call_StartForward(g_OnClientStartTouchBonusLevel);
+			Call_PushCell(client);
+			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
+			Call_PushCell(lastlevel);
+			Call_Finish();
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus3Level)
+	{
+		if(Timer_GetTrack(client) == TRACK_BONUS3)
+		{
+			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
+			g_iClientLastTrackZone[client] = zone;
+			
+			Call_StartForward(g_OnClientStartTouchBonusLevel);
+			Call_PushCell(client);
+			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
+			Call_PushCell(lastlevel);
+			Call_Finish();
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus3Checkpoint)
+	{
+		if(Timer_GetTrack(client) == TRACK_BONUS3)
+		{
+			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
+			g_iClientLastTrackZone[client] = zone;
+			
+			Call_StartForward(g_OnClientStartTouchBonusLevel);
+			Call_PushCell(client);
+			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
+			Call_PushCell(lastlevel);
+			Call_Finish();
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus4Level)
+	{
+		if(Timer_GetTrack(client) == TRACK_BONUS4)
+		{
+			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
+			g_iClientLastTrackZone[client] = zone;
+			
+			Call_StartForward(g_OnClientStartTouchBonusLevel);
+			Call_PushCell(client);
+			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
+			Call_PushCell(lastlevel);
+			Call_Finish();
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus4Checkpoint)
+	{
+		if(Timer_GetTrack(client) == TRACK_BONUS4)
+		{
+			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
+			g_iClientLastTrackZone[client] = zone;
+			
+			Call_StartForward(g_OnClientStartTouchBonusLevel);
+			Call_PushCell(client);
+			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
+			Call_PushCell(lastlevel);
+			Call_Finish();
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus5Level)
+	{
+		if(Timer_GetTrack(client) == TRACK_BONUS5)
+		{
+			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
+			g_iClientLastTrackZone[client] = zone;
+			
+			Call_StartForward(g_OnClientStartTouchBonusLevel);
+			Call_PushCell(client);
+			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
+			Call_PushCell(lastlevel);
+			Call_Finish();
+		}
+	}
+	else if (g_mapZones[zone][Type] == ZtBonus5Checkpoint)
+	{
+		if(Timer_GetTrack(client) == TRACK_BONUS5)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
@@ -1645,6 +2186,74 @@ public Action:EndTouchTrigger(caller, activator)
 		Timer_Restart(client);
 		Timer_SetTrack(client, TRACK_BONUS);
 	}
+	else if(g_mapZones[zone][Type] == ZtBonus2Start)
+	{
+		if(Timer_IsPlayerTouchingZoneType(client, ZtStop) || !CheckIllegalTeleport(client))
+			return;
+		
+		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			return;
+		
+		if(g_iIgnoreEndTouchStart[client])
+		{
+			g_iIgnoreEndTouchStart[client] = false;
+			return;
+		}
+		if(IsClientConnected(client)) EmitSoundToClient(client, SND_TIMER_START);
+		Timer_Restart(client);
+		Timer_SetTrack(client, TRACK_BONUS2);
+	}
+	else if(g_mapZones[zone][Type] == ZtBonus3Start)
+	{
+		if(Timer_IsPlayerTouchingZoneType(client, ZtStop) || !CheckIllegalTeleport(client))
+			return;
+		
+		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			return;
+		
+		if(g_iIgnoreEndTouchStart[client])
+		{
+			g_iIgnoreEndTouchStart[client] = false;
+			return;
+		}
+		if(IsClientConnected(client)) EmitSoundToClient(client, SND_TIMER_START);
+		Timer_Restart(client);
+		Timer_SetTrack(client, TRACK_BONUS3);
+	}
+	else if(g_mapZones[zone][Type] == ZtBonus4Start)
+	{
+		if(Timer_IsPlayerTouchingZoneType(client, ZtStop) || !CheckIllegalTeleport(client))
+			return;
+		
+		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			return;
+		
+		if(g_iIgnoreEndTouchStart[client])
+		{
+			g_iIgnoreEndTouchStart[client] = false;
+			return;
+		}
+		if(IsClientConnected(client)) EmitSoundToClient(client, SND_TIMER_START);
+		Timer_Restart(client);
+		Timer_SetTrack(client, TRACK_BONUS4);
+	}
+	else if(g_mapZones[zone][Type] == ZtBonus5Start)
+	{
+		if(Timer_IsPlayerTouchingZoneType(client, ZtStop) || !CheckIllegalTeleport(client))
+			return;
+		
+		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			return;
+		
+		if(g_iIgnoreEndTouchStart[client])
+		{
+			g_iIgnoreEndTouchStart[client] = false;
+			return;
+		}
+		if(IsClientConnected(client)) EmitSoundToClient(client, SND_TIMER_START);
+		Timer_Restart(client);
+		Timer_SetTrack(client, TRACK_BONUS5);
+	}
 	else if (g_mapZones[zone][Type] == ZtBlock)
 	{
 		if(g_Settings[NoblockEnable])
@@ -1711,7 +2320,6 @@ public OnConfigsExecuted()
 	GetConVarString(g_BeamEndZonePath, g_sBeamEndZonePath, sizeof(g_sBeamEndZonePath));
 	GetConVarString(g_BeamBonusStartZonePath, g_sBeamBonusStartZonePath, sizeof(g_sBeamBonusStartZonePath));
 	GetConVarString(g_BeamBonusEndZonePath, g_sBeamBonusEndZonePath, sizeof(g_sBeamBonusEndZonePath));
-	GetConVarString(g_BeamShortEndZonePath, g_sBeamShortEndZonePath, sizeof(g_sBeamShortEndZonePath));
 	
 	InitZoneSprites();
 	
@@ -1804,17 +2412,6 @@ InitZoneSprites()
 		precache_laser_end = PrecacheModel(spritebuffer);
 		AddFileToDownloadsTable(spritebuffer);
 		Format(spritebuffer, sizeof(spritebuffer), "%s.vtf", g_sBeamEndZonePath);
-		AddFileToDownloadsTable(spritebuffer);
-	}
-	
-	//short sprite
-	GetConVarString(g_BeamShortEndZonePath, g_sBeamShortEndZonePath, sizeof(g_sBeamShortEndZonePath));
-	Format(spritebuffer, sizeof(spritebuffer), "%s.vmt", g_sBeamShortEndZonePath);
-	if(!IsModelPrecached(spritebuffer))
-	{
-		precache_laser_short_end = PrecacheModel(spritebuffer);
-		AddFileToDownloadsTable(spritebuffer);
-		Format(spritebuffer, sizeof(spritebuffer), "%s.vtf", g_sBeamShortEndZonePath);
 		AddFileToDownloadsTable(spritebuffer);
 	}
 	
@@ -2040,8 +2637,6 @@ public Action_OnSettingsChange(Handle:cvar, const String:oldvalue[], const Strin
 		ParseColor(newvalue, g_levelColor);
 	else if (cvar == g_bonusLevelZoneColor)
 		ParseColor(newvalue, g_bonuslevelColor);
-	else if (cvar == g_shortEndZoneColor)
-		ParseColor(newvalue, g_shortendColor);
 	else if (cvar == g_freeStyleZoneColor)
 		ParseColor(newvalue, g_freeStyleColor);
 	else if (cvar == Sound_TeleLast)
@@ -2063,11 +2658,6 @@ public Action_OnSettingsChange(Handle:cvar, const String:oldvalue[], const Strin
 	else if (cvar == g_PreSpeedBonusStart)
 	{
 		g_bPreSpeedBonusStart = GetConVarBool(g_PreSpeedBonusStart);
-	}
-	else if (cvar == g_BeamShortEndZonePath)
-	{
-		FormatEx(g_sBeamShortEndZonePath, sizeof(g_sBeamShortEndZonePath) ,"%s", newvalue);
-		InitZoneSprites();
 	}
 	else if (cvar == g_BeamBonusEndZonePath)
 	{
@@ -2107,9 +2697,8 @@ bool:AddMapZone(String:map[], MapZoneType:type, String:name[], level_id, Float:p
 		
 		if ((type == ZtStart && !g_Settings[AllowMultipleStart])
 		|| (type == ZtEnd && !g_Settings[AllowMultipleEnd])
-		|| (type == ZtBonusStart && !g_Settings[AllowMultipleBonusStart]
-		|| (type == ZtBonusEnd && !g_Settings[AllowMultipleBonusEnd])
-		|| (type == ZtShortEnd) && !g_Settings[AllowMultipleShortEnd]))
+		|| (type == ZtBonusStart && !g_Settings[AllowMultipleBonusStart])
+		|| (type == ZtBonusEnd && !g_Settings[AllowMultipleBonusEnd]))
 		{
 			decl String:deleteQuery[256];
 			FormatEx(deleteQuery, sizeof(deleteQuery), "DELETE FROM mapzone WHERE map = '%s' AND type = %d;", map, type);
@@ -2142,6 +2731,10 @@ public MapZoneChangedCallback(Handle:owner, Handle:hndl, const String:error[], a
 		{
 			Timer_UpdateStageCount(TRACK_NORMAL);
 			Timer_UpdateStageCount(TRACK_BONUS);
+			Timer_UpdateStageCount(TRACK_BONUS2);
+			Timer_UpdateStageCount(TRACK_BONUS3);
+			Timer_UpdateStageCount(TRACK_BONUS4);
+			Timer_UpdateStageCount(TRACK_BONUS5);
 		}
 		LoadMapZones();
 	}
@@ -2704,12 +3297,10 @@ public Action:DrawZones(Handle:timer)
 			DrawBox(point1, point2, 1.0, g_startColor, true, precache_laser_start);
 		else if (g_mapZones[zone][Type] == ZtEnd)
 			DrawBox(point1, point2, 1.0, g_endColor, true, precache_laser_end);
-		else if (g_mapZones[zone][Type] == ZtBonusStart)
+		else if (g_mapZones[zone][Type] == ZtBonusStart || g_mapZones[zone][Type] == ZtBonus2Start || g_mapZones[zone][Type] == ZtBonus3Start || g_mapZones[zone][Type] == ZtBonus4Start || g_mapZones[zone][Type] == ZtBonus5Start)
 			DrawBox(point1, point2, 1.0, g_bonusstartColor, true, precache_laser_bonus_start);
-		else if (g_mapZones[zone][Type] == ZtBonusEnd)
+		else if (g_mapZones[zone][Type] == ZtBonusEnd || g_mapZones[zone][Type] == ZtBonus2End || g_mapZones[zone][Type] == ZtBonus3End || g_mapZones[zone][Type] == ZtBonus4End || g_mapZones[zone][Type] == ZtBonus5End)
 			DrawBox(point1, point2, 1.0, g_bonusendColor, true, precache_laser_bonus_end);
-		else if (g_mapZones[zone][Type] == ZtShortEnd)
-			DrawBox(point1, point2, 1.0, g_shortendColor, true, precache_laser_short_end);
 	}
 	
 	return Plugin_Continue;
@@ -2745,7 +3336,7 @@ DrawZone(zone, bool:flat)
 				DrawBox(point1, point2, 1.0, g_telenextColor, flat);
 			else if (g_mapZones[zone][Type] == ZtLevel)
 				DrawBox(point1, point2, 1.0, g_levelColor, flat);
-			else if (g_mapZones[zone][Type] == ZtBonusLevel)
+			else if (g_mapZones[zone][Type] == ZtBonusLevel || g_mapZones[zone][Type] == ZtBonus2Level || g_mapZones[zone][Type] == ZtBonus3Level || g_mapZones[zone][Type] == ZtBonus4Level || g_mapZones[zone][Type] == ZtBonus5Level)
 				DrawBox(point1, point2, 1.0, g_bonuslevelColor, flat);
 			else if (g_mapZones[zone][Type] == ZtStart)
 				DrawBox(point1, point2, 1.0, g_startColor, flat);
@@ -3357,8 +3948,20 @@ SpawnZoneEntitys(zone)
 			g_mapZones[zone][Type] == ZtEnd || 
 			g_mapZones[zone][Type] == ZtLevel || 
 			g_mapZones[zone][Type] == ZtBonusStart || 
+			g_mapZones[zone][Type] == ZtBonus2Start || 
+			g_mapZones[zone][Type] == ZtBonus3Start || 
+			g_mapZones[zone][Type] == ZtBonus4Start || 
+			g_mapZones[zone][Type] == ZtBonus5Start || 
 			g_mapZones[zone][Type] == ZtBonusEnd || 
-			g_mapZones[zone][Type] == ZtBonusLevel)
+			g_mapZones[zone][Type] == ZtBonus2End || 
+			g_mapZones[zone][Type] == ZtBonus3End || 
+			g_mapZones[zone][Type] == ZtBonus4End || 
+			g_mapZones[zone][Type] == ZtBonus5End || 
+			g_mapZones[zone][Type] == ZtBonusLevel || 
+			g_mapZones[zone][Type] == ZtBonus2Level || 
+			g_mapZones[zone][Type] == ZtBonus3Level || 
+			g_mapZones[zone][Type] == ZtBonus4Level || 
+			g_mapZones[zone][Type] == ZtBonus5Level)
 		{
 			SpawnZoneSpotLights(zone);
 		}
@@ -3486,7 +4089,7 @@ SpawnZoneSpotLights(zone)
 		color[1] = float(g_startColor[1]);
 		color[2] = float(g_startColor[2]);
 	}
-	else if(g_mapZones[zone][Type] == ZtBonusStart)
+	else if(g_mapZones[zone][Type] == ZtBonusStart || g_mapZones[zone][Type] == ZtBonus2Start || g_mapZones[zone][Type] == ZtBonus3Start || g_mapZones[zone][Type] == ZtBonus4Start || g_mapZones[zone][Type] == ZtBonus5Start)
 	{
 		color[0] = float(g_bonusstartColor[0]);
 		color[1] = float(g_bonusstartColor[1]);
@@ -3498,7 +4101,7 @@ SpawnZoneSpotLights(zone)
 		color[1] = float(g_levelColor[1]);
 		color[2] = float(g_levelColor[2]);
 	}
-	else if(g_mapZones[zone][Type] == ZtBonusLevel)
+	else if(g_mapZones[zone][Type] == ZtBonusLevel || g_mapZones[zone][Type] == ZtBonus2Level || g_mapZones[zone][Type] == ZtBonus3Level || g_mapZones[zone][Type] == ZtBonus4Level || g_mapZones[zone][Type] == ZtBonus5Level)
 	{
 		color[0] = float(g_bonuslevelColor[0]);
 		color[1] = float(g_bonuslevelColor[1]);
@@ -3510,7 +4113,7 @@ SpawnZoneSpotLights(zone)
 		color[1] = float(g_endColor[1]);
 		color[2] = float(g_endColor[2]);
 	}
-	else if(g_mapZones[zone][Type] == ZtBonusEnd)
+	else if(g_mapZones[zone][Type] == ZtBonusEnd || g_mapZones[zone][Type] == ZtBonus2End || g_mapZones[zone][Type] == ZtBonus3End || g_mapZones[zone][Type] == ZtBonus4End || g_mapZones[zone][Type] == ZtBonus5End)
 	{
 		color[0] = float(g_bonusendColor[0]);
 		color[1] = float(g_bonusendColor[1]);
@@ -3908,19 +4511,16 @@ ParseColor(const String:color[], result[])
 
 stock bool:Tele_Level(client, level)
 {
-	if(LEVEL_BONUS_END >= level >= LEVEL_START && client > 0 && g_bZonesLoaded)
+	if(LEVEL_BONUS5_END >= level >= LEVEL_START && client > 0 && g_bZonesLoaded)
 	{
 		for (new mapZone = 0; mapZone < g_mapZonesCount; mapZone++)
 		{
 			if(g_mapZones[mapZone][Level_Id] < LEVEL_START)
-			{
 				continue;
-			}
 			
 			if (g_mapZones[mapZone][Level_Id] == level)
 			{
-				Tele_Zone(client, mapZone);
-				return true;
+				return Tele_Zone(client, mapZone);
 			}
 		}
 	}
@@ -3928,10 +4528,10 @@ stock bool:Tele_Level(client, level)
 	return false;
 }
 
-stock Tele_Zone(client, zone, bool:stopspeed = true, bool:overwrite_physics = true)
+stock bool:Tele_Zone(client, zone, bool:stopspeed = true, bool:overwrite_physics = true)
 {
 	if(!IsClientInGame(client))
-		return;
+		return false;
 	
 	// Don't teleport from inside a startzone to the same zone
 	if(g_bZone[zone][client])
@@ -3939,12 +4539,32 @@ stock Tele_Zone(client, zone, bool:stopspeed = true, bool:overwrite_physics = tr
 		if(g_mapZones[zone][Type] == ZtStart)
 		{
 			CPrintToChat(client, PLUGIN_PREFIX, "Already inside start zone");
-			return;
+			return false;
 		}
 		else if(g_mapZones[zone][Type] == ZtBonusStart)
 		{
 			CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus start zone");
-			return;
+			return false;
+		}
+		else if(g_mapZones[zone][Type] == ZtBonus2Start)
+		{
+			CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus2 start zone");
+			return false;
+		}
+		else if(g_mapZones[zone][Type] == ZtBonus3Start)
+		{
+			CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus3 start zone");
+			return false;
+		}
+		else if(g_mapZones[zone][Type] == ZtBonus4Start)
+		{
+			CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus4 start zone");
+			return false;
+		}
+		else if(g_mapZones[zone][Type] == ZtBonus5Start)
+		{
+			CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus5 start zone");
+			return false;
 		}
 	}
 	
@@ -3960,9 +4580,11 @@ stock Tele_Zone(client, zone, bool:stopspeed = true, bool:overwrite_physics = tr
 	else center[2] = (g_mapZones[zone][Point1][2] + g_mapZones[zone][Point2][2]) / 2.0;
 	
 	//If teleporting outside a startzone skip the next end touch output
-	if((Timer_IsPlayerTouchingZoneType(client, ZtStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonusStart)) 
-		&& g_mapZones[zone][Type] != ZtStart && g_mapZones[zone][Type] != ZtBonusStart)
-	Timer_SetIgnoreEndTouchStart(client, 1);
+	new bool:touchstart = (Timer_IsPlayerTouchingZoneType(client, ZtStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonusStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonus2Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus3Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus4Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus5Start));
+	new bool:targetstart = (g_mapZones[zone][Type] != ZtStart && g_mapZones[zone][Type] != ZtBonusStart && g_mapZones[zone][Type] != ZtBonus2Start && g_mapZones[zone][Type] != ZtBonus3Start && g_mapZones[zone][Type] != ZtBonus4Start && g_mapZones[zone][Type] != ZtBonus5Start);
+	
+	if(touchstart && targetstart)
+		Timer_SetIgnoreEndTouchStart(client, 1);
 	
 	// Stop speed before and after teleporting
 	if(stopspeed)
@@ -3981,6 +4603,8 @@ stock Tele_Zone(client, zone, bool:stopspeed = true, bool:overwrite_physics = tr
 		SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", g_Physics[style][StyleTimeScale]);
 		SetEntityGravity(client, g_Physics[style][StyleGravity]);
 	}
+	
+	return true;
 }
 
 public Action:Timer_StopSpeed(Handle:timer, any:client)
@@ -4153,7 +4777,7 @@ public Action:Command_Restart(client, args)
 	{
 		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
 		{
-			ConfirmAbortMenu(client, SCMD_RESTART);
+			ConfirmAbortMenu(client, -1);
 			return Plugin_Handled;
 		}
 	}
@@ -4178,7 +4802,7 @@ public Action:Command_Start(client, args)
 		{
 			if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
 			{
-				ConfirmAbortMenu(client, SCMD_START);
+				ConfirmAbortMenu(client, TRACK_NORMAL);
 				return Plugin_Handled;
 			}
 		}
@@ -4198,7 +4822,7 @@ public Action:Command_Start(client, args)
 	{
 		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
 		{
-			ConfirmAbortMenu(client, SCMD_START);
+			ConfirmAbortMenu(client, TRACK_NORMAL);
 			return Plugin_Handled;
 		}
 	}
@@ -4232,17 +4856,153 @@ public Action:Command_BonusRestart(client, args)
 	{
 		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
 		{
-			ConfirmAbortMenu(client, SCMD_BONUSSTART);
+			ConfirmAbortMenu(client, TRACK_BONUS);
 			return Plugin_Handled;
 		}
 	}
 	
-	Client_BonusRestart(client);
+	Client_BonusRestart(client, TRACK_BONUS);
 	
 	return Plugin_Handled;
 }
 
-ConfirmAbortMenu(client, command)
+public Action:Command_Bonus2Restart(client, args)
+{
+	if(!g_Settings[StartEnable])
+		return Plugin_Handled;
+	
+	if(!IsClientInGame(client)) 
+		return Plugin_Handled;
+	
+	if(Timer_IsPlayerTouchingZoneType(client, ZtBonus2Start))
+	{
+		CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus2 start zone");
+		return Plugin_Handled;
+	}
+		
+	if(Timer_GetMapzoneCount(ZtBonus2Start) < 1)
+	{
+		CPrintToChat(client, PLUGIN_PREFIX, "There is no bonus2 in this map");
+		return Plugin_Handled;
+	}
+	
+	if(g_timerTeams)
+	{
+		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
+		{
+			ConfirmAbortMenu(client, TRACK_BONUS2);
+			return Plugin_Handled;
+		}
+	}
+	
+	Client_BonusRestart(client, TRACK_BONUS2);
+	
+	return Plugin_Handled;
+}
+
+public Action:Command_Bonus3Restart(client, args)
+{
+	if(!g_Settings[StartEnable])
+		return Plugin_Handled;
+	
+	if(!IsClientInGame(client)) 
+		return Plugin_Handled;
+	
+	if(Timer_IsPlayerTouchingZoneType(client, ZtBonus3Start))
+	{
+		CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus3 start zone");
+		return Plugin_Handled;
+	}
+		
+	if(Timer_GetMapzoneCount(ZtBonus3Start) < 1)
+	{
+		CPrintToChat(client, PLUGIN_PREFIX, "There is no bonus3 in this map");
+		return Plugin_Handled;
+	}
+	
+	if(g_timerTeams)
+	{
+		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
+		{
+			ConfirmAbortMenu(client, TRACK_BONUS3);
+			return Plugin_Handled;
+		}
+	}
+	
+	Client_BonusRestart(client, TRACK_BONUS3);
+	
+	return Plugin_Handled;
+}
+
+public Action:Command_Bonus4Restart(client, args)
+{
+	if(!g_Settings[StartEnable])
+		return Plugin_Handled;
+	
+	if(!IsClientInGame(client)) 
+		return Plugin_Handled;
+	
+	if(Timer_IsPlayerTouchingZoneType(client, ZtBonus4Start))
+	{
+		CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus4 start zone");
+		return Plugin_Handled;
+	}
+		
+	if(Timer_GetMapzoneCount(ZtBonus4Start) < 1)
+	{
+		CPrintToChat(client, PLUGIN_PREFIX, "There is no bonus4 in this map");
+		return Plugin_Handled;
+	}
+	
+	if(g_timerTeams)
+	{
+		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
+		{
+			ConfirmAbortMenu(client, TRACK_BONUS4);
+			return Plugin_Handled;
+		}
+	}
+	
+	Client_BonusRestart(client, TRACK_BONUS4);
+	
+	return Plugin_Handled;
+}
+
+public Action:Command_Bonus5Restart(client, args)
+{
+	if(!g_Settings[StartEnable])
+		return Plugin_Handled;
+	
+	if(!IsClientInGame(client)) 
+		return Plugin_Handled;
+	
+	if(Timer_IsPlayerTouchingZoneType(client, ZtBonus5Start))
+	{
+		CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus5 start zone");
+		return Plugin_Handled;
+	}
+		
+	if(Timer_GetMapzoneCount(ZtBonus5Start) < 1)
+	{
+		CPrintToChat(client, PLUGIN_PREFIX, "There is no bonus5 in this map");
+		return Plugin_Handled;
+	}
+	
+	if(g_timerTeams)
+	{
+		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
+		{
+			ConfirmAbortMenu(client, TRACK_BONUS5);
+			return Plugin_Handled;
+		}
+	}
+	
+	Client_BonusRestart(client, TRACK_BONUS5);
+	
+	return Plugin_Handled;
+}
+
+ConfirmAbortMenu(client, track)
 {
 	if (0 < client < MaxClients)
 	{
@@ -4259,12 +5019,10 @@ ConfirmAbortMenu(client, command)
 				SetMenuTitle(menu, "Are you sure to quit the Coop?");
 		}else SetMenuTitle(menu, "Are you sure to quit?");
 		
-		if(command == SCMD_RESTART)
-			AddMenuItem(menu, "restart", "Yes");
-		else if(command == SCMD_START)
-			AddMenuItem(menu, "start", "Yes");
-		else if(command == SCMD_BONUSSTART)
-			AddMenuItem(menu, "bonusstart", "Yes");
+		decl String:info[8];
+		IntToString(track, info, sizeof(info));
+		
+		AddMenuItem(menu, info, "Yes");
 		
 		AddMenuItem(menu, "no", "No");
 		
@@ -4280,17 +5038,20 @@ public Handle_ConfirmAbortMenu(Handle:menu, MenuAction:action, client, itemNum)
 		new bool:found = GetMenuItem(menu, itemNum, info, sizeof(info), _, info2, sizeof(info2));
 		if(found)
 		{
-			if(StrEqual(info, "start"))
+			new track = StringToInt(info);
+			
+			if(track == -1)
+			{
+				Client_Restart(client);
+				
+			}
+			else if(track == TRACK_NORMAL)
 			{
 				Client_Start(client);
 			}
-			else if(StrEqual(info, "restart"))
+			else
 			{
-				Client_Restart(client);
-			}
-			else if(StrEqual(info, "bonusstart"))
-			{
-				Client_BonusRestart(client);
+				Client_BonusRestart(client, track);
 			}
 		}
 	}
@@ -4387,7 +5148,7 @@ bool:Client_Restart(client, bool:teleport = true)
 	return true;
 }
 
-bool:Client_BonusRestart(client)
+bool:Client_BonusRestart(client, track)
 {
 	if(!IsClientInGame(client)) 
 		return false;
@@ -4422,7 +5183,16 @@ bool:Client_BonusRestart(client)
 	}
 	
 	//Teleport player to bonus-starzone
-	Tele_Level(client, LEVEL_BONUS_START);
+	if(track == TRACK_BONUS)
+		return Tele_Level(client, LEVEL_BONUS_START);
+	else if(track == TRACK_BONUS2)
+		return Tele_Level(client, LEVEL_BONUS2_START);
+	else if(track == TRACK_BONUS3)
+		return Tele_Level(client, LEVEL_BONUS3_START);
+	else if(track == TRACK_BONUS4)
+		return Tele_Level(client, LEVEL_BONUS4_START);
+	else if(track == TRACK_BONUS5)
+		return Tele_Level(client, LEVEL_BONUS5_START);
 	
 	return true;
 }
@@ -4524,7 +5294,7 @@ public Action:Command_Levels(client, args)
 		{
 			if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
 			{
-				ConfirmAbortMenu(client, SCMD_START);
+				ConfirmAbortMenu(client, TRACK_NORMAL);
 				return Plugin_Handled;
 			}
 		}
