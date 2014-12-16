@@ -160,7 +160,11 @@ public Action:Client_PlayerInfo(client, args)
 {
 	if(args < 1)
 	{
-		GetClientAuthString(client, g_TargetData[client][eTarget_SteamID], 32);
+		#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+			GetClientAuthId(client, AuthId_Steam2,g_TargetData[client][eTarget_SteamID], 32);
+		#else
+			GetClientAuthString(client, g_TargetData[client][eTarget_SteamID], 32);
+		#endif
 		GetClientName(client, g_TargetData[client][eTarget_Name], 256);
 		
 		g_TargetData[client][eTarget_Style] = g_StyleDefault;
