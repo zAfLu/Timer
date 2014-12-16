@@ -5,6 +5,7 @@
 
 #include <timer>
 #include <timer-logging>
+#include <timer-mapzones>
 #include <timer-stocks>
 #include <timer-config_loader.sp>
 
@@ -146,12 +147,28 @@ public OnPluginStart()
 		RegConsoleCmd("sm_topb", Command_BonusWorldRecord);
 		RegConsoleCmd("sm_bwr", Command_BonusWorldRecord);
 		RegConsoleCmd("sm_wrb", Command_BonusWorldRecord);
+		
+		RegConsoleCmd("sm_b2top", Command_Bonus2WorldRecord);
+		RegConsoleCmd("sm_topb2", Command_Bonus2WorldRecord);
+		RegConsoleCmd("sm_b2wr", Command_Bonus2WorldRecord);
+		RegConsoleCmd("sm_wrb2", Command_Bonus2WorldRecord);
+		
+		RegConsoleCmd("sm_b3top", Command_Bonus3WorldRecord);
+		RegConsoleCmd("sm_topb3", Command_Bonus3WorldRecord);
+		RegConsoleCmd("sm_b3wr", Command_Bonus3WorldRecord);
+		RegConsoleCmd("sm_wrb3", Command_Bonus3WorldRecord);
+		
+		RegConsoleCmd("sm_b4top", Command_Bonus4WorldRecord);
+		RegConsoleCmd("sm_topb4", Command_Bonus4WorldRecord);
+		RegConsoleCmd("sm_b4wr", Command_Bonus4WorldRecord);
+		RegConsoleCmd("sm_wrb4", Command_Bonus4WorldRecord);
+		
+		RegConsoleCmd("sm_b5top", Command_Bonus5WorldRecord);
+		RegConsoleCmd("sm_topb5", Command_Bonus5WorldRecord);
+		RegConsoleCmd("sm_b5wr", Command_Bonus5WorldRecord);
+		RegConsoleCmd("sm_wrb5", Command_Bonus5WorldRecord);
 	}
-	if(g_Settings[ShortWrEnable]) 
-	{
-		RegConsoleCmd("sm_stop", Command_ShortWorldRecord);
-		RegConsoleCmd("sm_swr", Command_ShortWorldRecord);
-	}
+	
 	RegConsoleCmd("sm_record", Command_PersonalRecord);
 	RegConsoleCmd("sm_rank", Command_PersonalRecord);
 	//RegConsoleCmd("sm_delete", Command_Delete);
@@ -183,10 +200,25 @@ public OnPluginStart()
 			RegConsoleCmd(g_Physics[i][StyleQuickBonusWrCommand], Callback_Empty);
 			AddCommandListener(Hook_WrCommands, g_Physics[i][StyleQuickBonusWrCommand]);
 		}
-		if(!StrEqual(g_Physics[i][StyleQuickShortWrCommand], ""))
+		if(!StrEqual(g_Physics[i][StyleQuickBonus2WrCommand], ""))
 		{
-			RegConsoleCmd(g_Physics[i][StyleQuickShortWrCommand], Callback_Empty);
-			AddCommandListener(Hook_WrCommands, g_Physics[i][StyleQuickShortWrCommand]);
+			RegConsoleCmd(g_Physics[i][StyleQuickBonus2WrCommand], Callback_Empty);
+			AddCommandListener(Hook_WrCommands, g_Physics[i][StyleQuickBonus2WrCommand]);
+		}
+		if(!StrEqual(g_Physics[i][StyleQuickBonus3WrCommand], ""))
+		{
+			RegConsoleCmd(g_Physics[i][StyleQuickBonus3WrCommand], Callback_Empty);
+			AddCommandListener(Hook_WrCommands, g_Physics[i][StyleQuickBonus3WrCommand]);
+		}
+		if(!StrEqual(g_Physics[i][StyleQuickBonus4WrCommand], ""))
+		{
+			RegConsoleCmd(g_Physics[i][StyleQuickBonus4WrCommand], Callback_Empty);
+			AddCommandListener(Hook_WrCommands, g_Physics[i][StyleQuickBonus4WrCommand]);
+		}
+		if(!StrEqual(g_Physics[i][StyleQuickBonus5WrCommand], ""))
+		{
+			RegConsoleCmd(g_Physics[i][StyleQuickBonus5WrCommand], Callback_Empty);
+			AddCommandListener(Hook_WrCommands, g_Physics[i][StyleQuickBonus5WrCommand]);
 		}
 	}
 	
@@ -234,7 +266,7 @@ UpdateRanks()
 	if (g_hSQL == INVALID_HANDLE)
 		return;
 	
-	for(new track = 0; track < TRACK_SHORT; track++) 
+	for(new track = 0; track < MAX_TRACKS; track++) 
 	{
 		for(new style = 0; style < g_StyleCount; style++) 
 		{
@@ -275,19 +307,49 @@ public Action:Command_WorldRecord(client, args)
 public Action:Command_BonusWorldRecord(client, args)
 {
 	if (g_timerPhysics && g_Settings[MultimodeEnable])
-		CreateRankedBWRMenu(client);
+		CreateRankedBWRMenu(client, 1);
 	else
 		CreateWRMenu(client, g_StyleDefault, TRACK_BONUS);
 	
 	return Plugin_Handled;
 }
 
-public Action:Command_ShortWorldRecord(client, args)
+public Action:Command_Bonus2WorldRecord(client, args)
 {
 	if (g_timerPhysics && g_Settings[MultimodeEnable])
-		CreateRankedSWRMenu(client);
+		CreateRankedBWRMenu(client, 2);
 	else
-		CreateWRMenu(client, g_StyleDefault, TRACK_SHORT);
+		CreateWRMenu(client, g_StyleDefault, TRACK_BONUS);
+	
+	return Plugin_Handled;
+}
+
+public Action:Command_Bonus3WorldRecord(client, args)
+{
+	if (g_timerPhysics && g_Settings[MultimodeEnable])
+		CreateRankedBWRMenu(client, 3);
+	else
+		CreateWRMenu(client, g_StyleDefault, TRACK_BONUS);
+	
+	return Plugin_Handled;
+}
+
+public Action:Command_Bonus4WorldRecord(client, args)
+{
+	if (g_timerPhysics && g_Settings[MultimodeEnable])
+		CreateRankedBWRMenu(client, 4);
+	else
+		CreateWRMenu(client, g_StyleDefault, TRACK_BONUS);
+	
+	return Plugin_Handled;
+}
+
+public Action:Command_Bonus5WorldRecord(client, args)
+{
+	if (g_timerPhysics && g_Settings[MultimodeEnable])
+		CreateRankedBWRMenu(client, 5);
+	else
+		CreateWRMenu(client, g_StyleDefault, TRACK_BONUS);
 	
 	return Plugin_Handled;
 }
@@ -306,24 +368,34 @@ public Action:Hook_WrCommands(client, const String:sCommand[], argc)
 		if(g_Physics[i][StyleCategory] != MCategory_Ranked)
 			continue;
 		
-		if(!StrEqual(g_Physics[i][StyleQuickWrCommand], ""))
-		if(StrEqual(g_Physics[i][StyleQuickWrCommand], sCommand))
+		if(!StrEqual(g_Physics[i][StyleQuickWrCommand], "") && StrEqual(g_Physics[i][StyleQuickWrCommand], sCommand))
 		{
 			CreateWRMenu(client, i, TRACK_NORMAL);
 			return Plugin_Handled;
 		}
-		
-		if(!StrEqual(g_Physics[i][StyleQuickBonusWrCommand], ""))
-		if(StrEqual(g_Physics[i][StyleQuickBonusWrCommand], sCommand))
+		else if(!StrEqual(g_Physics[i][StyleQuickBonusWrCommand], "") && StrEqual(g_Physics[i][StyleQuickBonusWrCommand], sCommand))
 		{
 			CreateWRMenu(client, i, TRACK_BONUS);
 			return Plugin_Handled;
 		}
-		
-		if(!StrEqual(g_Physics[i][StyleQuickShortWrCommand], ""))
-		if(StrEqual(g_Physics[i][StyleQuickShortWrCommand], sCommand))
+		else if(!StrEqual(g_Physics[i][StyleQuickBonus2WrCommand], "") && StrEqual(g_Physics[i][StyleQuickBonus2WrCommand], sCommand))
 		{
-			CreateWRMenu(client, i, TRACK_SHORT);
+			CreateWRMenu(client, i, TRACK_BONUS2);
+			return Plugin_Handled;
+		}
+		else if(!StrEqual(g_Physics[i][StyleQuickBonus3WrCommand], "") && StrEqual(g_Physics[i][StyleQuickBonus3WrCommand], sCommand))
+		{
+			CreateWRMenu(client, i, TRACK_BONUS3);
+			return Plugin_Handled;
+		}
+		else if(!StrEqual(g_Physics[i][StyleQuickBonus4WrCommand], "") && StrEqual(g_Physics[i][StyleQuickBonus4WrCommand], sCommand))
+		{
+			CreateWRMenu(client, i, TRACK_BONUS4);
+			return Plugin_Handled;
+		}
+		else if(!StrEqual(g_Physics[i][StyleQuickBonus5WrCommand], "") && StrEqual(g_Physics[i][StyleQuickBonus5WrCommand], sCommand))
+		{
+			CreateWRMenu(client, i, TRACK_BONUS5);
 			return Plugin_Handled;
 		}
 	}
@@ -669,10 +741,16 @@ CreateAdminTrackSelection(client)
 	SetMenuExitButton(menu, true);
 	
 	AddMenuItem(menu, "0", "Normal");
-	if(g_Settings[BonusWrEnable]) 
+	if(Timer_GetMapzoneCount(ZtBonusStart) > 0) 
 		AddMenuItem(menu, "1", "Bonus");
-	if(g_Settings[ShortWrEnable]) 
-		AddMenuItem(menu, "2", "Short");
+	if(Timer_GetMapzoneCount(ZtBonus2Start) > 0) 
+		AddMenuItem(menu, "2", "Bonus 2");
+	if(Timer_GetMapzoneCount(ZtBonus3Start) > 0) 
+		AddMenuItem(menu, "3", "Bonus 3");
+	if(Timer_GetMapzoneCount(ZtBonus4Start) > 0) 
+		AddMenuItem(menu, "4", "Bonus 4");
+	if(Timer_GetMapzoneCount(ZtBonus5Start) > 0) 
+		AddMenuItem(menu, "5", "Bonus 5");
 	
 	DisplayMenu(menu, client, MENU_TIME_FOREVER);
 }
@@ -793,21 +871,24 @@ RefreshCache()
 			
 			decl String:query[512];
 			FormatEx(query, sizeof(query), "SELECT id, auth, time, jumps, style, name, date, finishcount, stage, rank, jumpacc, finishspeed, maxspeed, avgspeed, strafes, strafeacc, replaypath, custom1, custom2, custom3 FROM round WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC;", g_currentMap, style, TRACK_NORMAL);	
-			
 			SQL_TQuery(g_hSQL, RefreshCacheCallback, query, style, DBPrio_Low);
 			
 			if(g_Settings[BonusWrEnable])
 			{
 				FormatEx(query, sizeof(query), "SELECT id, auth, time, jumps, style, name, date, finishcount, stage, rank, jumpacc, finishspeed, maxspeed, avgspeed, strafes, strafeacc, replaypath, custom1, custom2, custom3 FROM round WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC;", g_currentMap, style, TRACK_BONUS);	
-				
 				SQL_TQuery(g_hSQL, RefreshBonusCacheCallback, query, style, DBPrio_Low);
-			}
-			
-			if(g_Settings[ShortWrEnable])
-			{
-				FormatEx(query, sizeof(query), "SELECT id, auth, time, jumps, style, name, date, finishcount, stage, rank, jumpacc, finishspeed, maxspeed, avgspeed, strafes, strafeacc, replaypath, custom1, custom2, custom3 FROM round WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC;", g_currentMap, style, TRACK_SHORT);	
 				
-				SQL_TQuery(g_hSQL, RefreshShortCacheCallback, query, style, DBPrio_Low);
+				FormatEx(query, sizeof(query), "SELECT id, auth, time, jumps, style, name, date, finishcount, stage, rank, jumpacc, finishspeed, maxspeed, avgspeed, strafes, strafeacc, replaypath, custom1, custom2, custom3 FROM round WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC;", g_currentMap, style, TRACK_BONUS2);	
+				SQL_TQuery(g_hSQL, RefreshBonus2CacheCallback, query, style, DBPrio_Low);
+				
+				FormatEx(query, sizeof(query), "SELECT id, auth, time, jumps, style, name, date, finishcount, stage, rank, jumpacc, finishspeed, maxspeed, avgspeed, strafes, strafeacc, replaypath, custom1, custom2, custom3 FROM round WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC;", g_currentMap, style, TRACK_BONUS3);	
+				SQL_TQuery(g_hSQL, RefreshBonus3CacheCallback, query, style, DBPrio_Low);
+				
+				FormatEx(query, sizeof(query), "SELECT id, auth, time, jumps, style, name, date, finishcount, stage, rank, jumpacc, finishspeed, maxspeed, avgspeed, strafes, strafeacc, replaypath, custom1, custom2, custom3 FROM round WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC;", g_currentMap, style, TRACK_BONUS4);	
+				SQL_TQuery(g_hSQL, RefreshBonus4CacheCallback, query, style, DBPrio_Low);
+				
+				FormatEx(query, sizeof(query), "SELECT id, auth, time, jumps, style, name, date, finishcount, stage, rank, jumpacc, finishspeed, maxspeed, avgspeed, strafes, strafeacc, replaypath, custom1, custom2, custom3 FROM round WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC;", g_currentMap, style, TRACK_BONUS5);	
+				SQL_TQuery(g_hSQL, RefreshBonus5CacheCallback, query, style, DBPrio_Low);
 			}
 		}
 	}
@@ -882,15 +963,48 @@ public RefreshBonusCacheCallback(Handle:owner, Handle:hndl, const String:error[]
 	CollectCache(TRACK_BONUS, style, hndl);
 }
 
-public RefreshShortCacheCallback(Handle:owner, Handle:hndl, const String:error[], any:style)
+public RefreshBonus2CacheCallback(Handle:owner, Handle:hndl, const String:error[], any:style)
 {
 	if (hndl == INVALID_HANDLE)
 	{
-		Timer_LogError("SQL Error on RefreshShortCache: %s", error);
+		Timer_LogError("SQL Error on RefreshBonus2Cache: %s", error);
 		return;
 	}
 	
-	CollectCache(TRACK_SHORT, style, hndl);
+	CollectCache(TRACK_BONUS2, style, hndl);
+}
+
+public RefreshBonus3CacheCallback(Handle:owner, Handle:hndl, const String:error[], any:style)
+{
+	if (hndl == INVALID_HANDLE)
+	{
+		Timer_LogError("SQL Error on RefreshBonus3Cache: %s", error);
+		return;
+	}
+	
+	CollectCache(TRACK_BONUS3, style, hndl);
+}
+
+public RefreshBonus4CacheCallback(Handle:owner, Handle:hndl, const String:error[], any:style)
+{
+	if (hndl == INVALID_HANDLE)
+	{
+		Timer_LogError("SQL Error on RefreshBonus4Cache: %s", error);
+		return;
+	}
+	
+	CollectCache(TRACK_BONUS4, style, hndl);
+}
+
+public RefreshBonus5CacheCallback(Handle:owner, Handle:hndl, const String:error[], any:style)
+{
+	if (hndl == INVALID_HANDLE)
+	{
+		Timer_LogError("SQL Error on RefreshBonus5Cache: %s", error);
+		return;
+	}
+	
+	CollectCache(TRACK_BONUS5, style, hndl);
 }
 
 CollectBestCache(track, any:style)
@@ -962,9 +1076,6 @@ public ConnectSQLCallback(Handle:owner, Handle:hndl, const String:error[], any:d
 	
 	decl String:driver[16];
 	SQL_GetDriverIdent(owner, driver, sizeof(driver));
-	
-	if (StrEqual(driver, "mysql", false))
-		SQL_SetCharset(g_hSQL, "utf8");
 
 	g_reconnectCounter = 1;
 
@@ -1045,12 +1156,32 @@ public MenuHandler_RankedWR(Handle:menu, MenuAction:action, client, itemNum)
 	}
 }
 
-CreateRankedBWRMenu(client)
+CreateRankedBWRMenu(client, track)
 {
 	if(0 < client < MaxClients)
 	{
-		new Handle:menu = CreateMenu(MenuHandler_RankedBWR);
-
+		new Handle:menu;
+		if(track == TRACK_BONUS)
+		{
+			menu = CreateMenu(MenuHandler_RankedBWR);
+		}
+		else if(track == TRACK_BONUS2)
+		{
+			menu = CreateMenu(MenuHandler_RankedB2WR);
+		}
+		else if(track == TRACK_BONUS3)
+		{
+			menu = CreateMenu(MenuHandler_RankedB3WR);
+		}
+		else if(track == TRACK_BONUS4)
+		{
+			menu = CreateMenu(MenuHandler_RankedB4WR);
+		}
+		else if(track == TRACK_BONUS5)
+		{
+			menu = CreateMenu(MenuHandler_RankedB5WR);
+		}
+		
 		SetMenuTitle(menu, "%t", "Bonus World Record Menu Title", client);
 		
 		SetMenuExitBackButton(menu, true);
@@ -1116,59 +1247,63 @@ public MenuHandler_RankedBWR(Handle:menu, MenuAction:action, client, itemNum)
 	}
 }
 
-CreateRankedSWRMenu(client)
+public MenuHandler_RankedB2WR(Handle:menu, MenuAction:action, client, itemNum)
 {
-	if(0 < client < MaxClients)
+	if (action == MenuAction_End) 
 	{
-		new Handle:menu = CreateMenu(MenuHandler_RankedSWR);
+		CloseHandle(menu);
+	}
+	else if (action == MenuAction_Select) 
+	{
+		decl String:info[32];		
+		GetMenuItem(menu, itemNum, info, sizeof(info));
+		
+		CreateWRMenu(client, StringToInt(info), 2);
+	}
+}
 
-		SetMenuTitle(menu, "%t", "Short World Record Menu Title", client);
+public MenuHandler_RankedB3WR(Handle:menu, MenuAction:action, client, itemNum)
+{
+	if (action == MenuAction_End) 
+	{
+		CloseHandle(menu);
+	}
+	else if (action == MenuAction_Select) 
+	{
+		decl String:info[32];		
+		GetMenuItem(menu, itemNum, info, sizeof(info));
 		
-		SetMenuExitBackButton(menu, true);
-		SetMenuExitButton(menu, true);
-		
-		new count = 0;
-		new found = 0;
-		
-		new maxorder[3] = {0, ...};
+		CreateWRMenu(client, StringToInt(info), 3);
+	}
+}
 
-		for(new i = 0; i < MAX_STYLES-1; i++) 
-		{
-			if(!g_Physics[i][StyleEnable])
-				continue;
-			if(g_Physics[i][StyleCategory] != MCategory_Ranked)
-				continue;
-			
-			if(g_Physics[i][StyleOrder] > maxorder[MCategory_Ranked])
-				maxorder[MCategory_Ranked] = g_Physics[i][StyleOrder];
-			
-			count++;
-		}
+public MenuHandler_RankedB4WR(Handle:menu, MenuAction:action, client, itemNum)
+{
+	if (action == MenuAction_End) 
+	{
+		CloseHandle(menu);
+	}
+	else if (action == MenuAction_Select) 
+	{
+		decl String:info[32];		
+		GetMenuItem(menu, itemNum, info, sizeof(info));
 		
-		for(new order = 0; order <= maxorder[MCategory_Ranked]; order++) 
-		{
-			for(new i = 0; i < MAX_STYLES-1; i++) 
-			{
-				if(!g_Physics[i][StyleEnable])
-					continue;
-				if(g_Physics[i][StyleCategory] != MCategory_Ranked)
-					continue;
-				if(g_Physics[i][StyleOrder] != order)
-					continue;
-				
-				found++;
-				
-				new String:buffer[8];
-				IntToString(i, buffer, sizeof(buffer));
-				
-				AddMenuItem(menu, buffer, g_Physics[i][StyleName]);
-			}
-			
-			if(found == count)
-				break;
-		}
+		CreateWRMenu(client, StringToInt(info), 4);
+	}
+}
 
-		DisplayMenu(menu, client, MENU_TIME_FOREVER);
+public MenuHandler_RankedB5WR(Handle:menu, MenuAction:action, client, itemNum)
+{
+	if (action == MenuAction_End) 
+	{
+		CloseHandle(menu);
+	}
+	else if (action == MenuAction_Select) 
+	{
+		decl String:info[32];		
+		GetMenuItem(menu, itemNum, info, sizeof(info));
+		
+		CreateWRMenu(client, StringToInt(info), 5);
 	}
 }
 
@@ -1203,10 +1338,25 @@ CreateWRMenu(client, style, track)
 		menu = CreateMenu(MenuHandler_BonusWR);
 		SetMenuTitle(menu, "Bonus-Top players on %s [%d total]", g_currentMap, total);
 	}
-	else if (track == TRACK_SHORT) 
+	else if (track == TRACK_BONUS2) 
 	{
-		menu = CreateMenu(MenuHandler_ShortWR);
-		SetMenuTitle(menu, "Short-Top players on %s [%d total]", g_currentMap, total);
+		menu = CreateMenu(MenuHandler_Bonus2WR);
+		SetMenuTitle(menu, "Bonus2-Top players on %s [%d total]", g_currentMap, total);
+	}
+	else if (track == TRACK_BONUS3) 
+	{
+		menu = CreateMenu(MenuHandler_Bonus3WR);
+		SetMenuTitle(menu, "Bonus3-Top players on %s [%d total]", g_currentMap, total);
+	}
+	else if (track == TRACK_BONUS4) 
+	{
+		menu = CreateMenu(MenuHandler_Bonus4WR);
+		SetMenuTitle(menu, "Bonus4-Top players on %s [%d total]", g_currentMap, total);
+	}
+	else if (track == TRACK_BONUS5) 
+	{
+		menu = CreateMenu(MenuHandler_Bonus5WR);
+		SetMenuTitle(menu, "Bonus5-Top players on %s [%d total]", g_currentMap, total);
 	}
 	
 	if (g_timerPhysics && g_Settings[MultimodeEnable])
@@ -1246,9 +1396,8 @@ CreateWRMenu(client, style, track)
 			
 			if(g_Settings[MultimodeEnable])
 			{
-				if(track == TRACK_BONUS) CreateRankedBWRMenu(client);
-				else if(track == TRACK_SHORT) CreateRankedSWRMenu(client);
-				else CreateRankedWRMenu(client);
+				if(track == TRACK_NORMAL) CreateRankedWRMenu(client);
+				else CreateRankedBWRMenu(client, track);
 			}
 		}
 	}
@@ -1277,7 +1426,6 @@ public MenuHandler_WR(Handle:menu, MenuAction:action, param1, param2)
 	{
 		decl String:info[64];		
 		GetMenuItem(menu, param2, info, sizeof(info));
-			
 		CreatePlayerInfoMenu(param1, StringToInt(info), 0);
 	}
 }
@@ -1293,7 +1441,7 @@ public MenuHandler_BonusWR(Handle:menu, MenuAction:action, param1, param2)
 		if (param2 == MenuCancel_ExitBack) 
 		{
 			if (g_timerPhysics)
-				CreateRankedBWRMenu(param1);
+				CreateRankedBWRMenu(param1, 1);
 		}
 	} 
 	else if (action == MenuAction_Select) 
@@ -1305,7 +1453,7 @@ public MenuHandler_BonusWR(Handle:menu, MenuAction:action, param1, param2)
 	}
 }
 
-public MenuHandler_ShortWR(Handle:menu, MenuAction:action, param1, param2)
+public MenuHandler_Bonus2WR(Handle:menu, MenuAction:action, param1, param2)
 {
 	if (action == MenuAction_End) 
 	{
@@ -1316,7 +1464,7 @@ public MenuHandler_ShortWR(Handle:menu, MenuAction:action, param1, param2)
 		if (param2 == MenuCancel_ExitBack) 
 		{
 			if (g_timerPhysics)
-				CreateRankedSWRMenu(param1);
+				CreateRankedBWRMenu(param1, 2);
 		}
 	} 
 	else if (action == MenuAction_Select) 
@@ -1325,6 +1473,75 @@ public MenuHandler_ShortWR(Handle:menu, MenuAction:action, param1, param2)
 		GetMenuItem(menu, param2, info, sizeof(info));
 			
 		CreatePlayerInfoMenu(param1, StringToInt(info), 2);
+	}
+}
+
+public MenuHandler_Bonus3WR(Handle:menu, MenuAction:action, param1, param2)
+{
+	if (action == MenuAction_End) 
+	{
+		CloseHandle(menu);
+	}
+	else if (action == MenuAction_Cancel) 
+	{
+		if (param2 == MenuCancel_ExitBack) 
+		{
+			if (g_timerPhysics)
+				CreateRankedBWRMenu(param1, 3);
+		}
+	} 
+	else if (action == MenuAction_Select) 
+	{
+		decl String:info[64];		
+		GetMenuItem(menu, param2, info, sizeof(info));
+			
+		CreatePlayerInfoMenu(param1, StringToInt(info), 3);
+	}
+}
+
+public MenuHandler_Bonus4WR(Handle:menu, MenuAction:action, param1, param2)
+{
+	if (action == MenuAction_End) 
+	{
+		CloseHandle(menu);
+	}
+	else if (action == MenuAction_Cancel) 
+	{
+		if (param2 == MenuCancel_ExitBack) 
+		{
+			if (g_timerPhysics)
+				CreateRankedBWRMenu(param1, 4);
+		}
+	} 
+	else if (action == MenuAction_Select) 
+	{
+		decl String:info[64];		
+		GetMenuItem(menu, param2, info, sizeof(info));
+			
+		CreatePlayerInfoMenu(param1, StringToInt(info), 4);
+	}
+}
+
+public MenuHandler_Bonus5WR(Handle:menu, MenuAction:action, param1, param2)
+{
+	if (action == MenuAction_End) 
+	{
+		CloseHandle(menu);
+	}
+	else if (action == MenuAction_Cancel) 
+	{
+		if (param2 == MenuCancel_ExitBack) 
+		{
+			if (g_timerPhysics)
+				CreateRankedBWRMenu(param1, 5);
+		}
+	} 
+	else if (action == MenuAction_Select) 
+	{
+		decl String:info[64];		
+		GetMenuItem(menu, param2, info, sizeof(info));
+			
+		CreatePlayerInfoMenu(param1, StringToInt(info), 5);
 	}
 }
 
@@ -1340,9 +1557,21 @@ CreatePlayerInfoMenu(client, id, track)
 	{
 		menu = CreateMenu(MenuHandler_RankedBWR);
 	}
-	else if(track == TRACK_SHORT)
+	else if(track == TRACK_BONUS2)
 	{
-		menu = CreateMenu(MenuHandler_RankedSWR);
+		menu = CreateMenu(MenuHandler_RankedB2WR);
+	}
+	else if(track == TRACK_BONUS3)
+	{
+		menu = CreateMenu(MenuHandler_RankedB3WR);
+	}
+	else if(track == TRACK_BONUS4)
+	{
+		menu = CreateMenu(MenuHandler_RankedB4WR);
+	}
+	else if(track == TRACK_BONUS5)
+	{
+		menu = CreateMenu(MenuHandler_RankedB5WR);
 	}
 	
 	new style = g_wrStyleMode[client];
