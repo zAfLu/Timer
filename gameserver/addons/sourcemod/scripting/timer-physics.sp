@@ -1392,7 +1392,11 @@ ApplyDifficulty(client)
 		SetEntProp(client, Prop_Send, "m_iDefaultFOV", g_Physics[style][StyleFOV]);
 		
 		decl String:auth[32];
-		GetClientAuthString(client, auth, sizeof(auth));
+		#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+			GetClientAuthId(client, AuthId_Steam2, auth, sizeof(auth));
+		#else
+			GetClientAuthString(client, auth, sizeof(auth));
+		#endif
 		
 		if(StrEqual(g_Physics[style][StyleDesc], ""))
 		{
