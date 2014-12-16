@@ -56,7 +56,6 @@ new Handle:g_cvarTimeLimit	= INVALID_HANDLE;
 new bool:g_timerPhysics = false;
 new bool:g_timerMapzones = false;
 new bool:g_timerLjStats = false;
-new bool:g_timerMapTier = false;
 new bool:g_timerRankings = false;
 new bool:g_timerWorldRecord = false;
 
@@ -114,7 +113,6 @@ public OnPluginStart()
 	g_timerPhysics = LibraryExists("timer-physics");
 	g_timerMapzones = LibraryExists("timer-mapzones");
 	g_timerLjStats = LibraryExists("timer-ljstats");
-	g_timerMapTier = LibraryExists("timer-maptier");
 	g_timerRankings = LibraryExists("timer-rankings");
 	g_timerWorldRecord = LibraryExists("timer-worldrecord");
 	
@@ -177,11 +175,7 @@ public OnLibraryAdded(const String:name[])
 	else if (StrEqual(name, "timer-ljstats"))
 	{
 		g_timerLjStats = true;
-	}	
-	else if (StrEqual(name, "timer-maptier"))
-	{
-		g_timerMapTier = true;
-	}	
+	}
 	else if (StrEqual(name, "timer-rankings"))
 	{
 		g_timerRankings = true;
@@ -205,10 +199,6 @@ public OnLibraryRemoved(const String:name[])
 	else if (StrEqual(name, "timer-ljstats"))
 	{
 		g_timerLjStats = false;
-	}	
-	else if (StrEqual(name, "timer-maptier"))
-	{
-		g_timerMapTier = false;
 	}	
 	else if (StrEqual(name, "timer-rankings"))
 	{
@@ -1240,7 +1230,14 @@ UpdateHUD_CSGO(client)
 	
 	//collect player info
 	decl String:auth[32]; //steam ID
-	if(!IsFakeClient(iClientToShow)) GetClientAuthString(iClientToShow, auth, sizeof(auth));
+	if(!IsFakeClient(iClientToShow))
+	{
+		#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+			GetClientAuthId(iClientToShow, AuthId_Steam2, auth, sizeof(auth));
+		#else
+			GetClientAuthString(iClientToShow, auth, sizeof(auth));
+		#endif
+	}
 	else FormatEx(auth, sizeof(auth), "Replay-Bot");
 
 	//collect player stats
@@ -1282,10 +1279,6 @@ UpdateHUD_CSGO(client)
 		//correct fail format
 		Timer_SecondsToTime(time, buffer, sizeof(buffer), 0);
 	}
-	
-	//get maptier
-	//new tier = 1;
-	//if(g_timerMaptier) tier = Timer_GetTier();
 
 	//get speed
 	new Float:maxspeed, Float:currentspeed, Float:avgspeed;
