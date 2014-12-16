@@ -194,10 +194,22 @@ public OnTimerRecord(client, track, style, Float:time, Float:lasttime, currentra
 	{
 		FormatEx(BonusString, sizeof(BonusString), " {olive}bonus");
 	}
-	else if(track == TRACK_SHORT)
+	else if(track == TRACK_BONUS2)
 	{
-		FormatEx(BonusString, sizeof(BonusString), " {olive}short");
-	}	
+		FormatEx(BonusString, sizeof(BonusString), " {olive}bonus2");
+	}
+	else if(track == TRACK_BONUS3)
+	{
+		FormatEx(BonusString, sizeof(BonusString), " {olive}bonus3");
+	}
+	else if(track == TRACK_BONUS4)
+	{
+		FormatEx(BonusString, sizeof(BonusString), " {olive}bonus4");
+	}
+	else if(track == TRACK_BONUS5)
+	{
+		FormatEx(BonusString, sizeof(BonusString), " {olive}bonus5");
+	}
 	
 	new String:RankString[128], String:RankPwndString[128];
 
