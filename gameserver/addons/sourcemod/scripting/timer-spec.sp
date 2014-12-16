@@ -55,7 +55,8 @@ public Action:Command_spec(client, args)
 				ReplyToCommand(client, "[SM] %t", "Target must be alive");
 				return Plugin_Handled;
 			}
-			FakeClientCommand(client, "spec_player \"%N\"", target);
+			SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", target);
+			SetEntProp(client, Prop_Send, "m_iObserverMode", 4);
 		}
 		if (!IsClientInGame(target)) ReplyToCommand(client, "[SM] %t", "Target is not in game");
 	}
@@ -102,6 +103,7 @@ public Action:Cmd_SpecMost(client, args)
 
 	ChangeClientTeam(client, 1);
 	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", target);
+	SetEntProp(client, Prop_Send, "m_iObserverMode", 4);
 
 	return Plugin_Handled;
 }
@@ -173,6 +175,7 @@ public Action:Cmd_SpecFar(client, args)
 
 	ChangeClientTeam(client, 1);
 	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", target);
+	SetEntProp(client, Prop_Send, "m_iObserverMode", 4);
 
 	return Plugin_Handled;
 }
