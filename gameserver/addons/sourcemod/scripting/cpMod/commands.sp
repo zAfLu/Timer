@@ -86,6 +86,18 @@ public SaveClientLocation(client)
 	//if plugin is enabled
 	if(g_bEnabled)
 	{
+		if(Timer_IsPlayerTouchingStartZone(client))
+		{
+			PrintToChat(client, "Not allowed inside start zones,");
+			return;
+		}
+		
+		if(Timer_IsPlayerTouchingZoneType(client, ZtAntiCp))
+		{
+			PrintToChat(client, "You are insiade an Ati CP zone.");
+			return;
+		}
+
 		//if player on ground
 		if(GetEntDataEnt2(client, FindSendPropOffs("CBasePlayer", "m_hGroundEntity")) != -1 || g_bAir)
 		{
@@ -94,9 +106,16 @@ public SaveClientLocation(client)
 			//if player has less than limit checkpoints
 			if(whole < CPLIMIT)
 			{
+				if(!g_bRestore) 
+				{
+					if(!Timer_GetPauseStatus(client))
+						Timer_Pause(client);
+				}
+				else Timer_Reset(client);
+				
 				//save some data
 				GetClientAbsOrigin(client, g_fPlayerCords[client][whole]);
-				GetClientAbsAngles(client, g_fPlayerAngles[client][whole]);
+				GetClientEyeAngles(client, g_fPlayerAngles[client][whole]);
 				GetEntPropVector(client, Prop_Data, "m_vecVelocity", g_fPlayerVelocity[client][whole]);
 				
 				g_iPlayerLevel[client][whole] = Timer_GetClientLevel(client);
@@ -115,7 +134,15 @@ public SaveClientLocation(client)
 				}
 			}
 			else if(whole == CPLIMIT)
-			{ //cp rotation enabled
+			{
+				if(!g_bRestore) 
+				{
+					if(!Timer_GetPauseStatus(client))
+						Timer_Pause(client);
+				}
+				else Timer_Reset(client);
+				
+				//cp rotation enabled
 				new current = g_CurrentCp[client];
 				
 				//if last slot reached
@@ -204,6 +231,8 @@ public TeleClient(client,pos)
 	else Client_TelePos(client, pos);
 }
 
+new g_iSelectedPos[MAXPLAYERS+1];
+
 public Client_TelePos(client, pos)
 {
 	//if no valid player
@@ -213,60 +242,81 @@ public Client_TelePos(client, pos)
 	//if plugin is enabled
 	if(g_bEnabled)
 	{
-		if(g_timer) Timer_Reset(client);
-		
-		new current = g_CurrentCp[client];
-		new whole = g_WholeCp[client];
-		
-		//if on last slot and next
-		if(current == whole-1 && pos == 1)
+		if(g_timer)
 		{
-			//reset to first
-			g_CurrentCp[client] = -1;
-			current = -1;
-		}
-		//if on first slot and previous
-		if(current == 0  && pos == -1)
-		{
-			//reset to last
-			g_CurrentCp[client] = whole;
-			current = whole;
-		}
-		
-		new actual = current+pos;
-		
-		//if not valid checkpoint
-		//if(actual < 0 || actual > whole || (g_fPlayerCords[client][actual][0] == 0.0 && g_fPlayerCords[client][actual][1] == 0.0 && g_fPlayerCords[client][actual][2] == 0.0)){
-		if(actual < 0 || actual > whole)
-		{
-			PrintToChat(client, "%t", "CpNotFound", YELLOW,LIGHTGREEN,YELLOW);
-		}
-		else
-		{ 
-			if(g_timerMapzones)
+			if(!g_bRestore) 
 			{
-				if(Timer_IsPlayerTouchingZoneType(client, ZtStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonusStart)) 
-					Timer_SetIgnoreEndTouchStart(client, 1);
+				if(!Timer_GetPauseStatus(client))
+					Timer_Pause(client);
 			}
-			
-			if(g_bVelocity)
-				TeleportEntity(client, g_fPlayerCords[client][actual], g_fPlayerAngles[client][actual], g_fPlayerVelocity[client][actual]);
-			else TeleportEntity(client, g_fPlayerCords[client][actual], g_fPlayerAngles[client][actual], Float:{0.0,0.0,-100.0});//stop him
-			PrintToChat(client, "%t", "CpTeleported", YELLOW,LIGHTGREEN,YELLOW,GREEN,actual+1,whole,YELLOW);
-			g_CurrentCp[client] += pos;
-			
-			if(g_bEffects) 
-			{
-				EmitSoundToClient(client,"buttons/blip1.wav",client);
-				TE_SetupBeamRingPoint(g_fPlayerCords[client][actual],10.0,200.0,g_BeamSpriteRing2,0,0,10,1.0,50.0,0.0,{255,255,255,255},0,0);
-				TE_SendToClient(client);
-			}
-			
-			Timer_SetClientLevel(client, g_iPlayerLevel[client][actual]);
+			else Timer_Reset(client);
 		}
+		
+		g_iSelectedPos[client] = pos;
+		CreateTimer(0.0, Timer_TelePos, client); //Bugfix
 	}
 	else //plugin disabled
 		PrintToChat(client, "%t", "PluginDisabled", YELLOW,LIGHTGREEN,YELLOW);
+}
+
+public Action:Timer_TelePos(Handle:timer, any:client)
+{
+	if(!IsClientInGame(client))
+		return Plugin_Stop;
+	
+	new current = g_CurrentCp[client];
+	new whole = g_WholeCp[client];
+	
+	//if on last slot and next
+	if(current == whole-1 && g_iSelectedPos[client] == 1)
+	{
+		//reset to first
+		g_CurrentCp[client] = -1;
+		current = -1;
+	}
+	//if on first slot and previous
+	if(current == 0  && g_iSelectedPos[client] == -1)
+	{
+		//reset to last
+		g_CurrentCp[client] = whole;
+		current = whole;
+	}
+	
+	new actual = current+g_iSelectedPos[client];
+	
+	//if not valid checkpoint
+	//if(actual < 0 || actual > whole || (g_fPlayerCords[client][actual][0] == 0.0 && g_fPlayerCords[client][actual][1] == 0.0 && g_fPlayerCords[client][actual][2] == 0.0)){
+	if(actual < 0 || actual > whole)
+	{
+		PrintToChat(client, "%t", "CpNotFound", YELLOW,LIGHTGREEN,YELLOW);
+	}
+	else
+	{
+		if(g_timerMapzones)
+		{
+			if(Timer_IsPlayerTouchingStartZone(client))
+				Timer_SetIgnoreEndTouchStart(client, 1);
+		}
+		
+		Timer_RestoreLastJumps(client);
+		
+		if(g_bVelocity)
+			TeleportEntity(client, g_fPlayerCords[client][actual], g_fPlayerAngles[client][actual], g_fPlayerVelocity[client][actual]);
+		else TeleportEntity(client, g_fPlayerCords[client][actual], g_fPlayerAngles[client][actual], Float:{0.0,0.0,-100.0});//stop him
+		PrintToChat(client, "%t", "CpTeleported", YELLOW,LIGHTGREEN,YELLOW,GREEN,actual+1,whole,YELLOW);
+		g_CurrentCp[client] += g_iSelectedPos[client];
+		
+		if(g_bEffects) 
+		{
+			EmitSoundToClient(client,"buttons/blip1.wav",client);
+			TE_SetupBeamRingPoint(g_fPlayerCords[client][actual],10.0,200.0,g_BeamSpriteRing2,0,0,10,1.0,50.0,0.0,{255,255,255,255},0,0);
+			TE_SendToClient(client);
+		}
+		
+		Timer_SetClientLevel(client, g_iPlayerLevel[client][actual]);
+	}
+	
+	return Plugin_Stop;
 }
 
 ConfirmAbortMenu(client, pos)

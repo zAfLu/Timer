@@ -140,7 +140,11 @@ public db_insertPlayer(client){
 	decl String:szSteamId[32];
 	decl String:szUName[MAX_NAME_LENGTH];
 	//get some playerinformation
-	GetClientAuthString(client, szSteamId, 32);
+	#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+		GetClientAuthId(client, AuthId_Steam2, szSteamId, sizeof(szSteamId));
+	#else
+		GetClientAuthString(client, szSteamId, sizeof(szSteamId));
+	#endif
 	GetClientName(client, szUName, MAX_NAME_LENGTH);
 	
 	decl String:szName[MAX_NAME_LENGTH*2+1];
@@ -161,7 +165,11 @@ public db_updatePlayerCheckpoint(client, current){
 	decl String:szSteamId[32];
 	//get some playerinformation
 	GetClientName(client, szUName, MAX_NAME_LENGTH);
-	GetClientAuthString(client, szSteamId, 32);
+	#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+		GetClientAuthId(client, AuthId_Steam2, szSteamId, sizeof(szSteamId));
+	#else
+		GetClientAuthString(client, szSteamId, sizeof(szSteamId));
+	#endif
 	
 	decl String:szName[MAX_NAME_LENGTH*2+1];
 	//escape some quote characters that could mess up the szQuery
@@ -200,7 +208,11 @@ public SQL_SelectPlayerCallback(Handle:owner, Handle:hndl, const String:error[],
 public db_selectPlayerCheckpoint(client){
 	decl String:szQuery[255];
 	decl String:szSteamId[32];
-	GetClientAuthString(client, szSteamId, 32);
+	#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+		GetClientAuthId(client, AuthId_Steam2, szSteamId, sizeof(szSteamId));
+	#else
+		GetClientAuthString(client, szSteamId, sizeof(szSteamId));
+	#endif
 	
 	Format(szQuery, 255, sql_selectCheckpoint, szSteamId, g_szMapName);
 	
