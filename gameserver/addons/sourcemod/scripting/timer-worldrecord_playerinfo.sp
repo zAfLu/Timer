@@ -22,6 +22,7 @@ new g_TargetData[MAXPLAYERS+1][eTarget];
 
 new g_iMapCount[2];
 new g_iMapCountComplete[MAXPLAYERS+1];
+
 new Handle:g_hMaps[2] = {INVALID_HANDLE, ...};
 
 new g_MenuPos[MAXPLAYERS+1];
@@ -41,7 +42,7 @@ new String:sql_selectPlayerWRs[] = "SELECT * FROM (SELECT * FROM (SELECT `time`,
 new String:sql_selectPlayerWRsBonus[] = "SELECT * FROM (SELECT * FROM (SELECT `time`,`map`,`auth` FROM `round` WHERE `track` = '1' AND `style` = '%d' GROUP BY `round`.`map`, `round`.`time`) AS temp GROUP BY LOWER(`map`)) AS temp2 WHERE `auth` = '%s';";
 new String:sql_selectPlayerMapRecord[] = "SELECT auth, name, jumps, time, date, rank, finishcount, avgspeed, maxspeed, finishspeed FROM round WHERE auth LIKE '%s' AND map = '%s' AND track = '%i' AND `style` = '%d';";
 
-public Plugin:myinfo = 
+public Plugin:myinfo =
 {
 	name = "[Timer] Worldrecord - PlayerInfo",
 	author = "Zipcore, Credits: Das D",
@@ -53,10 +54,10 @@ public Plugin:myinfo =
 public OnPluginStart()
 {
 	RegConsoleCmd("sm_playerinfo", Client_PlayerInfo, "playerinfo");
-	
+
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	if (g_hSQL == INVALID_HANDLE)
 	{
 		ConnectSQL();
@@ -67,9 +68,9 @@ public OnMapStart()
 {
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	GetCurrentMap(g_MapName, 32);
-	
+
 	if (g_hSQL == INVALID_HANDLE)
 	{
 		ConnectSQL();
@@ -97,10 +98,10 @@ public OnTimerSqlStop()
 ConnectSQL()
 {
 	g_hSQL = Handle:Timer_SqlGetConnection();
-	
+
 	if (g_hSQL == INVALID_HANDLE)
 		CreateTimer(0.1, Timer_SQLReconnect, _ , TIMER_FLAG_NO_MAPCHANGE);
-	else 
+	else
 	{
 		countmaps();
 		countbonusmaps();
@@ -133,25 +134,25 @@ public SQL_CountMapCallback(Handle:owner, Handle:hndl, const String:error[], any
 	{
 		return;
 	}
-	
+
 	if(SQL_GetRowCount(hndl))
 	{
 		new track = data;
 		g_iMapCount[track] = 0;
-		
+
 		new String:sMap[128];
 		new Handle:Kv = CreateKeyValues("data");
-		
+
 		while(SQL_FetchRow(hndl))
 		{
 			SQL_FetchString(hndl, 0, sMap, sizeof(sMap));
-			
+
 			KvJumpToKey(Kv, sMap, true);
 			KvRewind(Kv);
-			
+
 			g_iMapCount[track]++;
 		}
-		
+
 		g_hMaps[track] = CloneHandle(Kv);
 	}
 }
@@ -166,33 +167,33 @@ public Action:Client_PlayerInfo(client, args)
 			GetClientAuthString(client, g_TargetData[client][eTarget_SteamID], 32);
 		#endif
 		GetClientName(client, g_TargetData[client][eTarget_Name], 256);
-		
+
 		g_TargetData[client][eTarget_Style] = g_StyleDefault;
-		
+
 		g_TargetData[client][eTarget_Active] = true;
-		
+
 		if(g_Settings[MultimodeEnable]) StylePanel(client);
 		else Menu_PlayerInfo(client);
 	}
 	else if(args >= 1)
 	{
 		ClearClient(client);
-		
+
 		decl String:NameBuffer[256];
 		GetCmdArgString(NameBuffer, sizeof(NameBuffer));
 		new startidx = 0;
 		new len = strlen(NameBuffer);
-		
+
 		if ((NameBuffer[0] == '"') && (NameBuffer[len-1] == '"'))
 		{
 			startidx = 1;
 			NameBuffer[len-1] = '\0';
 		}
-		
+
 		Format(g_TargetData[client][eTarget_Name], 256, "%s", NameBuffer[startidx]);
-		
+
 		g_TargetData[client][eTarget_Active] = false;
-		
+
 		if(g_Settings[MultimodeEnable])
 		{
 			StylePanel(client);
@@ -213,35 +214,35 @@ StylePanel(client)
 		new Handle:menu = CreateMenu(MenuHandler_StylePanel);
 
 		SetMenuTitle(menu, "Select Style", client);
-		
+
 		SetMenuExitButton(menu, true);
 
-		for(new i = 0; i < MAX_STYLES-1; i++) 
+		for(new i = 0; i < MAX_STYLES-1; i++)
 		{
 			if(!g_Physics[i][StyleEnable])
 				continue;
 			if(g_Physics[i][StyleCategory] != MCategory_Ranked)
 				continue;
-			
+
 			new String:buffer[8];
 			IntToString(i, buffer, sizeof(buffer));
-				
+
 			AddMenuItem(menu, buffer, g_Physics[i][StyleName]);
 		}
-		
+
 		DisplayMenu(menu, client, MENU_TIME_FOREVER);
 	}
 }
 
 public MenuHandler_StylePanel(Handle:menu, MenuAction:action, client, itemNum)
 {
-	if (action == MenuAction_Select) 
+	if (action == MenuAction_Select)
 	{
-		decl String:info[8];		
+		decl String:info[8];
 		GetMenuItem(menu, itemNum, info, sizeof(info));
-		
+
 		g_TargetData[client][eTarget_Style] = StringToInt(info);
-		
+
 		if(g_TargetData[client][eTarget_Active])
 		{
 			Menu_PlayerInfo(client);
@@ -255,9 +256,9 @@ public QueryPlayerName(client, String:QueryPlayerName[])
 	decl String:Query[255];
 	decl String:szName[MAX_NAME_LENGTH*2+1];
 	SQL_QuoteString(g_hSQL, QueryPlayerName, szName, MAX_NAME_LENGTH*2+1);
-	
+
 	Format(Query, 255, sql_QueryPlayerName, szName);
-	
+
 	SQL_TQuery(g_hSQL, SQL_QueryPlayerNameCallback, Query, client);
 }
 
@@ -266,22 +267,22 @@ new Handle:g_hPlayerSearch[MAXPLAYERS+1] = {INVALID_HANDLE, ...};
 public SQL_QueryPlayerNameCallback(Handle:owner, Handle:hndl, const String:error[], any:data){
 	if(hndl == INVALID_HANDLE)
 		LogError("Error loading playername (%s)", error);
-		
+
 	new client = data;
 	decl String:PlayerName[256];
 	decl String:SteamID[32];
 	decl String:PlayerSteam[256];
 	decl String:PlayerChkDup[256];
 	PlayerChkDup = "zero";
-	
+
 	new Handle:menu = CreateMenu(Menu_PlayerSearch);
 	SetMenuTitle(menu, "Playersearch\n ");
-	
+
 	g_hPlayerSearch[client] = CreateKeyValues("data");
-	
+
 	if(SQL_HasResultSet(hndl))
 	{
-		
+
 		new i = 0;
 		while (SQL_FetchRow(hndl))
 		{
@@ -293,13 +294,13 @@ public SQL_QueryPlayerNameCallback(Handle:owner, Handle:hndl, const String:error
 				if(!StrEqual(PlayerChkDup, SteamID, false))
 				{
 					KvJumpToKey(g_hPlayerSearch[client], SteamID, true);
-					
+
 					KvSetString(g_hPlayerSearch[client], "name", PlayerName);
-					
+
 					KvRewind(g_hPlayerSearch[client]);
-					
+
 					AddMenuItem(menu, SteamID, PlayerSteam);
-					
+
 					Format(PlayerChkDup, 256, "%s",SteamID);
 					i++;
 				}
@@ -322,7 +323,7 @@ public SQL_QueryPlayerNameCallback(Handle:owner, Handle:hndl, const String:error
 	else{
 		AddMenuItem(menu, "nope", "No Player found...", ITEMDRAW_DISABLED);
 	}
-	
+
 	SetMenuExitButton(menu, true);
 	DisplayMenu(menu, client, MENU_TIME_FOREVER);
 }
@@ -330,10 +331,10 @@ public SQL_QueryPlayerNameCallback(Handle:owner, Handle:hndl, const String:error
 public Menu_PlayerInfo(client)
 {
 	g_TargetData[client][eTarget_Active] = true;
-	
+
 	g_TargetData[client][eTarget_MainMenu] = CreateMenu(Menu_PlayerInfo_Handler);
 	SetMenuTitle(g_TargetData[client][eTarget_MainMenu], "%s's Overview\n(%s)\n ", g_TargetData[client][eTarget_Name], g_TargetData[client][eTarget_SteamID]);
-	
+
 	AddMenuItem(g_TargetData[client][eTarget_MainMenu], "view_rank", "View Record/Rank (current Map)");
 	AddMenuItem(g_TargetData[client][eTarget_MainMenu], "view_prank", "View Points/Rank");
 	AddMenuItem(g_TargetData[client][eTarget_MainMenu], "view_records", "View all Records");
@@ -342,8 +343,8 @@ public Menu_PlayerInfo(client)
 	AddMenuItem(g_TargetData[client][eTarget_MainMenu], "view_bwr", "View all WRs (Bonus)");
 	AddMenuItem(g_TargetData[client][eTarget_MainMenu], "view_incomplete", "View Incomplete Maps");
 	AddMenuItem(g_TargetData[client][eTarget_MainMenu], "view_b_incomplete", "View Incomplete Maps (Bonus)");
-	
-	if(g_Settings[MultimodeEnable]) 
+
+	if(g_Settings[MultimodeEnable])
 	{
 		decl String:buffer[512];
 		Format(buffer, sizeof(buffer), "Change style [current: %s]", g_Physics[g_TargetData[client][eTarget_Style]][StyleName]);
@@ -357,28 +358,28 @@ public SQL_ViewSingleRecordCallback(Handle:owner, Handle:hndl, const String:erro
 {
 	if(hndl == INVALID_HANDLE)
 		LogError("Error loading single record (%s)", error);
-	
+
 	new Handle:pack = data;
 	ResetPack(pack);
-	
+
 	new client = ReadPackCell(pack);
 	decl String:MapName[32];
 	ReadPackString(pack, MapName, 32);
-	
+
 	CloseHandle(pack);
 	pack = INVALID_HANDLE;
-	
+
 	new Handle:menu = CreateMenu(Menu_Stock_Handler);
 	SetMenuTitle(menu, "Record Info\n ");
-	
+
 	if(SQL_HasResultSet(hndl) && SQL_FetchRow(hndl)){
-	
+
 		decl String:SteamId[32];
 		decl String:PlayerName[MAX_NAME_LENGTH];
 		decl String:Date[20];
 		new rank;
 		new finishcount;
-		
+
 		SQL_FetchString(hndl, 0, SteamId, 32);
 		SQL_FetchString(hndl, 1, PlayerName, MAX_NAME_LENGTH);
 		SQL_FetchString(hndl, 4, Date, 20);
@@ -387,7 +388,7 @@ public SQL_ViewSingleRecordCallback(Handle:owner, Handle:hndl, const String:erro
 		new Float:avgspeed = SQL_FetchFloat(hndl, 7);
 		new Float:maxspeed = SQL_FetchFloat(hndl, 8);
 		new Float:finishspeed = SQL_FetchFloat(hndl, 9);
-		
+
 		decl String:LineDate[32];
 		Format(LineDate, 32, "Date: %s", Date);
 		decl String:LinePLSteam[128];
@@ -395,18 +396,18 @@ public SQL_ViewSingleRecordCallback(Handle:owner, Handle:hndl, const String:erro
 		decl String:LineRank[128];
 		Format(LineRank, 128, "Rank: #%i on %s [Count: %i]", rank, MapName, finishcount);
 		decl String:LineTime[128];
-		decl String:Time[32];		
+		decl String:Time[32];
 		Timer_SecondsToTime(SQL_FetchFloat(hndl, 3), Time, 16, 2);
 		Format(LineTime, 128, "Time: %s", Time);
 		decl String:LineSpeed[128];
 		Format(LineSpeed, 128, "Speed [Avg: %.2f | Max: %.2f | Fin: %.2f]", avgspeed, maxspeed, finishspeed);
-		
+
 		AddMenuItem(menu, "1", LineDate);
 		AddMenuItem(menu, "2", LinePLSteam);
 		AddMenuItem(menu, "3", LineRank);
 		AddMenuItem(menu, "4", LineTime);
 		AddMenuItem(menu, "5", LineSpeed);
-		
+
 		SetMenuExitButton(menu, true);
 		SetMenuExitBackButton(menu, true);
 		DisplayMenu(menu, client, MENU_TIME_FOREVER);
@@ -422,20 +423,20 @@ public SQL_ViewSingleRecordCallback(Handle:owner, Handle:hndl, const String:erro
 public SQL_ViewPlayerMapRecordCallback(Handle:owner, Handle:hndl, const String:error[], any:data){
 	if(hndl == INVALID_HANDLE)
 		LogError("Error loading single record (%s)", error);
-	
+
 	new Handle:pack = data;
 	ResetPack(pack);
-	
+
 	new client = ReadPackCell(pack);
 	decl String:MapName[32];
 	ReadPackString(pack, MapName, 32);
 	decl String:SteamID[256];
 	ReadPackString(pack, SteamID, 256);
 	new track = ReadPackCell(pack);
-	
+
 	CloseHandle(pack);
 	pack = INVALID_HANDLE;
-	
+
 	new Handle:menu = CreateMenu(Menu_Stock_Handler2);
 	if(!track)
 	{
@@ -445,15 +446,15 @@ public SQL_ViewPlayerMapRecordCallback(Handle:owner, Handle:hndl, const String:e
 	{
 		SetMenuTitle(menu, "Bonus Record Info\n ");
 	}
-	
+
 	if(SQL_HasResultSet(hndl) && SQL_FetchRow(hndl)){
-	
+
 		decl String:SteamId[32];
 		decl String:PlayerName[MAX_NAME_LENGTH];
 		decl String:Date[20];
 		new rank;
 		new finishcount;
-		
+
 		SQL_FetchString(hndl, 0, SteamId, 32);
 		SQL_FetchString(hndl, 1, PlayerName, MAX_NAME_LENGTH);
 		SQL_FetchString(hndl, 4, Date, 20);
@@ -462,7 +463,7 @@ public SQL_ViewPlayerMapRecordCallback(Handle:owner, Handle:hndl, const String:e
 		new Float:avgspeed = SQL_FetchFloat(hndl, 7);
 		new Float:maxspeed = SQL_FetchFloat(hndl, 8);
 		new Float:finishspeed = SQL_FetchFloat(hndl, 9);
-		
+
 		decl String:LineDate[32];
 		Format(LineDate, 32, "Date: %s", Date);
 		decl String:LinePLSteam[128];
@@ -470,18 +471,18 @@ public SQL_ViewPlayerMapRecordCallback(Handle:owner, Handle:hndl, const String:e
 		decl String:LineRank[128];
 		Format(LineRank, 128, "Rank: #%i on %s [Count: %i]", rank, MapName, finishcount);
 		decl String:LineTime[128];
-		decl String:Time[32];		
+		decl String:Time[32];
 		Timer_SecondsToTime(SQL_FetchFloat(hndl, 3), Time, 16, 2);
 		Format(LineTime, 128, "Time: %s", Time);
 		decl String:LineSpeed[128];
 		Format(LineSpeed, 128, "Speed [Avg: %.2f | Max: %.2f | Fin: %.2f]", avgspeed, maxspeed, finishspeed);
-		
+
 		AddMenuItem(menu, "1", LineDate);
 		AddMenuItem(menu, "2", LinePLSteam);
 		AddMenuItem(menu, "3", LineRank);
 		AddMenuItem(menu, "4", LineTime);
 		AddMenuItem(menu, "5", LineSpeed);
-		
+
 		SetMenuExitButton(menu, true);
 		SetMenuExitBackButton(menu, true);
 		DisplayMenu(menu, client, MENU_TIME_FOREVER);
@@ -498,12 +499,12 @@ public SQL_PRowCountCallback(Handle:owner, Handle:hndl, const String:error[], an
 {
 	if(hndl == INVALID_HANDLE)
 		LogError("Error viewing player point rowcount (%s)", error);
-	
+
 	new Handle:pack = data;
 	ResetPack(pack);
-	
+
 	new client = ReadPackCell(pack);
-	
+
 	if(SQL_HasResultSet(hndl) && SQL_FetchRow(hndl))
 	{
 		g_PointRowCount[client] = SQL_GetRowCount(hndl);
@@ -514,37 +515,37 @@ public SQL_PlayerPointsCallback(Handle:owner, Handle:hndl, const String:error[],
 {
 	if(hndl == INVALID_HANDLE)
 		LogError("Error loading player points (%s)", error);
-	
+
 	new Handle:pack = data;
 	ResetPack(pack);
-	
+
 	new client = ReadPackCell(pack);
-	
+
 	CloseHandle(pack);
 	pack = INVALID_HANDLE;
-	
+
 	new Handle:menu = CreateMenu(Menu_Stock_Handler);
 	SetMenuTitle(menu, "Points Info\n ");
-	
+
 	if(SQL_HasResultSet(hndl) && SQL_FetchRow(hndl))
 	{
 		decl String:SteamId[32];
 		decl String:Name[128];
 		decl String:Points[64];
 		new points;
-		
+
 		SQL_FetchString(hndl, 0, SteamId, 32);
 		SQL_FetchString(hndl, 1, Name, 128);
 		SQL_FetchString(hndl, 2, Points, 64);
 		points = SQL_FetchInt(hndl, 2);
-		
+
 		decl String:LineName[128];
 		decl String:LinePoints[64];
 		decl String:LinePointRank[64];
 		Format(LineName, 128, "Player: %s (%s)", Name, SteamId);
 		Format(LinePoints, 64, "Points: %i", points);
 		Format(LinePointRank, 64, "Rank: #%i", g_PointRowCount[client]);
-		
+
 		AddMenuItem(menu, "1", LineName);
 		AddMenuItem(menu, "2", LinePoints);
 		AddMenuItem(menu, "3", LinePointRank);
@@ -557,13 +558,13 @@ public SQL_PlayerPointsCallback(Handle:owner, Handle:hndl, const String:error[],
 public SQL_ViewPlayerMapsCallback(Handle:owner, Handle:hndl, const String:error[], any:data){
 	if(hndl == INVALID_HANDLE)
 		LogError("[Timer] Error loading playerinfo (%s)", error);
-	
+
 	new Handle:pack = data;
 	ResetPack(pack);
-	
+
 	new client = ReadPackCell(pack);
 	new track = ReadPackCell(pack);
-	
+
 	CloseHandle(pack);
 	pack = INVALID_HANDLE;
 
@@ -572,10 +573,10 @@ public SQL_ViewPlayerMapsCallback(Handle:owner, Handle:hndl, const String:error[
 	decl String:szVrTime[16];
 	decl String:SteamID[256];
 	decl String:buffer[512];
-	
+
 	// Begin Menu
 	g_TargetData[client][eTarget_MapMenu] = CreateMenu(MapMenu_Stock_Handler);
-	
+
 	new mapscomplete = 0;
 	if(SQL_HasResultSet(hndl))
 	{
@@ -593,7 +594,7 @@ public SQL_ViewPlayerMapsCallback(Handle:owner, Handle:hndl, const String:error[
 		mapcou_fl = float(g_iMapCount[1]);
 	}
 	new Float: Com_Per_fl = (mapcom_fl/mapcou_fl)*100;
-	
+
 	if(!track)
 	{
 		SetMenuTitle(g_TargetData[client][eTarget_MapMenu], "%i of %i (%.2f%%) Maps completed\nRecords:\n ", mapscomplete, g_iMapCount[0], Com_Per_fl);
@@ -602,7 +603,7 @@ public SQL_ViewPlayerMapsCallback(Handle:owner, Handle:hndl, const String:error[
 	{
 		SetMenuTitle(g_TargetData[client][eTarget_MapMenu], "%i of %i (%.2f%%) Bonuses completed\nRecords:\n ", mapscomplete, g_iMapCount[1], Com_Per_fl);
 	}
-	
+
 	if(SQL_HasResultSet(hndl))
 	{
 		new i = 1;
@@ -613,17 +614,17 @@ public SQL_ViewPlayerMapsCallback(Handle:owner, Handle:hndl, const String:error[
 			SQL_FetchString(hndl, 2, SteamID, 256);
 			Timer_SecondsToTime(SQL_FetchFloat(hndl, 0), szVrTime, 16, 2);
 			Format(szValue, 64, "%s - %s",szMapName, szVrTime);
-			
+
 			new Handle:pack2 = CreateDataPack();
 			WritePackCell(pack2, client);
 			WritePackString(pack2, szMapName);
 			WritePackString(pack2, SteamID);
 			WritePackCell(pack2, track);
 			Format(buffer, sizeof(buffer), "%d", pack2);
-			
+
 			CloseHandle(pack2);
 			pack2 = INVALID_HANDLE;
-			
+
 			AddMenuItem(g_TargetData[client][eTarget_MapMenu], buffer, szValue);
 			i++;
 		}
@@ -632,7 +633,7 @@ public SQL_ViewPlayerMapsCallback(Handle:owner, Handle:hndl, const String:error[
 			AddMenuItem(g_TargetData[client][eTarget_MapMenu], "nope", "No Record found...");
 		}
 	}
-	
+
 	SetMenuExitBackButton(g_TargetData[client][eTarget_MapMenu], true);
 	DisplayMenu(g_TargetData[client][eTarget_MapMenu], client, MENU_TIME_FOREVER);
 }
@@ -643,16 +644,16 @@ public Menu_PlayerSearch(Handle:menu, MenuAction:action, client, param2)
 	{
 		decl String:SteamID[256];
 		GetMenuItem(menu, param2, SteamID, sizeof(SteamID));
-		
+
 		if(!StrEqual(SteamID, "nope") && !StrEqual(SteamID, "many") && !StrEqual(SteamID, "speci"))
 		{
 			Format(g_TargetData[client][eTarget_SteamID], 32, "%s", SteamID);
 			KvJumpToKey(g_hPlayerSearch[client], SteamID, false);
 			KvGetString(g_hPlayerSearch[client], "name", g_TargetData[client][eTarget_Name], 256, "Unknown");
-			
+
 			Menu_PlayerInfo(client);
 		}
-		
+
 		if(g_hPlayerSearch[client] != INVALID_HANDLE)
 		{
 			CloseHandle(g_hPlayerSearch[client]);
@@ -670,7 +671,7 @@ public Menu_PlayerInfo_Handler(Handle:menu, MenuAction:action, client, param2)
 	if ( action == MenuAction_Select )
 	{
 		new first_item = GetMenuSelectionPosition();
-		DisplayMenuAtItem(menu, client, first_item, MENU_TIME_FOREVER); 
+		DisplayMenuAtItem(menu, client, first_item, MENU_TIME_FOREVER);
 
 		switch (param2)
 		{
@@ -682,7 +683,7 @@ public Menu_PlayerInfo_Handler(Handle:menu, MenuAction:action, client, param2)
 				new Handle:pack2 = CreateDataPack();
 				WritePackCell(pack2, client);
 				WritePackString(pack2, g_MapName);
-				
+
 				SQL_TQuery(g_hSQL, SQL_ViewSingleRecordCallback, Query, pack2);
 			}
 			case 1:
@@ -704,8 +705,8 @@ public Menu_PlayerInfo_Handler(Handle:menu, MenuAction:action, client, param2)
 				new Handle:pack4 = CreateDataPack();
 				WritePackCell(pack4, client);
 				WritePackCell(pack4, track);
-				
-				
+
+
 				decl String:szQuery[255];
 				Format(szQuery, 255, sql_selectPlayerMaps, g_TargetData[client][eTarget_SteamID], g_TargetData[client][eTarget_Style]);
 				SQL_TQuery(g_hSQL, SQL_ViewPlayerMapsCallback, szQuery, pack4);
@@ -716,7 +717,7 @@ public Menu_PlayerInfo_Handler(Handle:menu, MenuAction:action, client, param2)
 				new Handle:pack5 = CreateDataPack();
 				WritePackCell(pack5, client);
 				WritePackCell(pack5, track);
-				
+
 				decl String:szQuery[255];
 				Format(szQuery, 255, sql_selectPlayerMapsBonus, g_TargetData[client][eTarget_SteamID], g_TargetData[client][eTarget_Style]);
 				SQL_TQuery(g_hSQL, SQL_ViewPlayerMapsCallback, szQuery, pack5);
@@ -727,7 +728,7 @@ public Menu_PlayerInfo_Handler(Handle:menu, MenuAction:action, client, param2)
 				new Handle:pack5 = CreateDataPack();
 				WritePackCell(pack5, client);
 				WritePackCell(pack5, track);
-				
+
 				decl String:szQuery[255];
 				Format(szQuery, 255, sql_selectPlayerWRs, g_TargetData[client][eTarget_Style], g_TargetData[client][eTarget_SteamID]);
 				SQL_TQuery(g_hSQL, SQL_ViewPlayerMapsCallback, szQuery, pack5);
@@ -738,7 +739,7 @@ public Menu_PlayerInfo_Handler(Handle:menu, MenuAction:action, client, param2)
 				new Handle:pack5 = CreateDataPack();
 				WritePackCell(pack5, client);
 				WritePackCell(pack5, track);
-				
+
 				decl String:szQuery[255];
 				Format(szQuery, 255, sql_selectPlayerWRsBonus, g_TargetData[client][eTarget_Style], g_TargetData[client][eTarget_SteamID]);
 				SQL_TQuery(g_hSQL, SQL_ViewPlayerMapsCallback, szQuery, pack5);
@@ -764,7 +765,7 @@ public Menu_Stock_Handler(Handle:menu, MenuAction:action, client, param2)
 	if ( action == MenuAction_Select )
 	{
 		new first_item = GetMenuSelectionPosition();
-		DisplayMenuAtItem(menu, client, first_item, MENU_TIME_FOREVER); 
+		DisplayMenuAtItem(menu, client, first_item, MENU_TIME_FOREVER);
 	}
 	else if(action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
 	{
@@ -781,7 +782,7 @@ public Menu_Stock_Handler2(Handle:menu, MenuAction:action, client, param2)
 	if ( action == MenuAction_Select )
 	{
 		new first_item = GetMenuSelectionPosition();
-		DisplayMenuAtItem(menu, client, first_item, MENU_TIME_FOREVER); 
+		DisplayMenuAtItem(menu, client, first_item, MENU_TIME_FOREVER);
 	}
 	else if(action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
 	{
@@ -798,11 +799,11 @@ public MapMenu_Stock_Handler(Handle:menu, MenuAction:action, client, param2)
 	if ( action == MenuAction_Select )
 	{
 		g_MenuPos[client] = GetMenuSelectionPosition();
-		DisplayMenuAtItem(menu, client, g_MenuPos[client], MENU_TIME_FOREVER); 
-		
+		DisplayMenuAtItem(menu, client, g_MenuPos[client], MENU_TIME_FOREVER);
+
 		decl String:data[512];
 		GetMenuItem(menu, param2, data, sizeof(data));
-		new Handle:pack = Handle:StringToInt(data); 
+		new Handle:pack = Handle:StringToInt(data);
 		ResetPack(pack);
 		ReadPackCell(pack);
 		decl String:MapName[256];
@@ -810,10 +811,10 @@ public MapMenu_Stock_Handler(Handle:menu, MenuAction:action, client, param2)
 		decl String:SteamID[256];
 		ReadPackString(pack, SteamID, 256);
 		new track = ReadPackCell(pack);
-		
+
 		decl String:szQuery[255];
 		Format(szQuery, 255, sql_selectPlayerMapRecord, g_TargetData[client][eTarget_SteamID], MapName, track, g_TargetData[client][eTarget_Style]);
-		
+
 		SQL_TQuery(g_hSQL, SQL_ViewPlayerMapRecordCallback, szQuery, pack);
 	}
 	else if(action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
@@ -829,7 +830,7 @@ GetIncompleteMaps(client, String:auth[], track, style)
 	WritePackString(pack, auth);
 	WritePackCell(pack, track);
 	WritePackCell(pack, style);
-	
+
 	decl String:sQuery[255];
 	if(style > -1)
 		Format(sQuery, sizeof(sQuery), "SELECT DISTINCT map FROM round WHERE bonus = %d AND auth = '%s' AND style = %d ORDER BY map", track, auth, style);
@@ -844,7 +845,7 @@ public CallBack_IncompleteMaps(Handle:owner, Handle:hndl, const String:error[], 
 	{
 		return;
 	}
-	
+
 	if(!SQL_GetRowCount(hndl))
 	{
 		LogError("No startzone found.");
@@ -852,7 +853,7 @@ public CallBack_IncompleteMaps(Handle:owner, Handle:hndl, const String:error[], 
 	else
 	{
 		new Handle:pack = data;
-		
+
 		ResetPack(pack);
 		new client = ReadPackCell(pack);
 		decl String:sAuth[64];
@@ -861,24 +862,24 @@ public CallBack_IncompleteMaps(Handle:owner, Handle:hndl, const String:error[], 
 		new style = ReadPackCell(pack);
 		CloseHandle(pack);
 		pack = INVALID_HANDLE;
-		
+
 		new String:sMap[128];
 		new Handle:Kv = CreateKeyValues("data");
-		
+
 		while(SQL_FetchRow(hndl))
 		{
 			SQL_FetchString(hndl, 0, sMap, sizeof(sMap));
-			
+
 			KvJumpToKey(Kv, sMap, true);
 			KvRewind(Kv);
-			
+
 			g_iMapCountComplete[client]++;
 		}
-		
+
 		new iCountIncomplete;
-		
+
 		new Handle:menu = CreateMenu(MenuHandler_Incompelte);
-		
+
 		KvRewind(g_hMaps[track]);
 		KvGotoFirstSubKey(g_hMaps[track], true);
 		do
@@ -891,10 +892,10 @@ public CallBack_IncompleteMaps(Handle:owner, Handle:hndl, const String:error[], 
 			}
 			KvRewind(Kv);
         } while (KvGotoNextKey(g_hMaps[track], false));
-		
+
 		if(iCountIncomplete == 0)
 			AddMenuItem(menu, "", "All maps compelte, awesome!");
-		
+
 		if(track == TRACK_BONUS)
 		{
 			if(style == -1 || !g_Settings[MultimodeEnable])
@@ -909,7 +910,7 @@ public CallBack_IncompleteMaps(Handle:owner, Handle:hndl, const String:error[], 
 			else
 				SetMenuTitle(menu, "%i of %i (%.2f%%) Maps incomplete\nStyle: %s\n ", iCountIncomplete, g_iMapCount[track], 100.0*(float(iCountIncomplete)/float(g_iMapCount[track])), g_Physics[style][StyleName]);
 		}
-		
+
 		SetMenuExitButton(menu, true);
 		SetMenuExitBackButton(menu, true);
 		DisplayMenu(menu, client, MENU_TIME_FOREVER);
@@ -944,7 +945,7 @@ ClearClient(client)
 		CloseHandle(g_TargetData[client][eTarget_MainMenu]);
 		g_TargetData[client][eTarget_MainMenu] = INVALID_HANDLE;
 	}
-	
+
 	if(g_TargetData[client][eTarget_MapMenu] != INVALID_HANDLE)
 	{
 		CloseHandle(g_TargetData[client][eTarget_MapMenu]);

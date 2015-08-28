@@ -47,7 +47,6 @@ enum Timer
 	CurrentStyle,
 	FpsMax,
 	Track,
-	bool:ShortEndReached,
 	String:ReplayFile[32]
 }
 
@@ -289,6 +288,14 @@ public OnMapStart()
 	
 	LoadPhysics();
 	LoadTimerSettings();
+	
+	for (new client = 1; client <= MaxClients; client++)
+		g_timers[client][Track] = TRACK_NORMAL;
+}
+
+public OnClientPutInServer(client)
+{
+	g_timers[client][Track] = TRACK_NORMAL;
 }
 
 /**
@@ -411,7 +418,6 @@ bool:ResetTimer(client)
 	g_timers[client][IsPaused] = false;
 	g_timers[client][PauseStartTime] = 0.0;
 	g_timers[client][PauseTotalTime] = 0.0;
-	g_timers[client][ShortEndReached] = false;
 	g_timers[client][ReplayFile][0] = '\0';
 	
 	if(g_timerPhysics) Timer_ResetAccuracy(client);
@@ -434,7 +440,6 @@ bool:StartTimer(client)
 		return false;
 	
 	g_timers[client][Enabled] = true;
-	g_timers[client][ShortEndReached] = false;
 	g_timers[client][StartTime] = GetGameTime();
 	g_timers[client][EndTime] = -1.0;
 	g_timers[client][Jumps] = 0;
@@ -470,7 +475,6 @@ bool:StopTimer(client, bool:stopPaused = true)
 	
 	//Get time
 	g_timers[client][Enabled] = false;
-	g_timers[client][ShortEndReached] = true;
 	g_timers[client][EndTime] = GetGameTime();
 	
 	//Prevent Resume
@@ -551,7 +555,7 @@ bool:PauseTimer(client)
 	Array_Copy(angles, g_timers[client][PauseLastAngles], 3);
 
 	new Float:velocity[3];
-	GetClientAbsVelocity(client, velocity);
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", velocity);
 	Array_Copy(velocity, g_timers[client][PauseLastVelocity], 3);
 
 	Call_StartForward(g_timerPausedForward);
@@ -695,11 +699,7 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 	if(g_timerPhysics) 
 		if (g_Physics[style][StyleCategory] != MCategory_Ranked || !(bool:Timer_IsStyleRanked(style)))
 			return;
-	
-	//short end already triggered
-	if (g_timers[client][ShortEndReached] && track == 2)
-		return;
-	
+
 	new flashbangcount; //TODO
 	
 	new stage;
@@ -725,9 +725,7 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 			return;
 		}
 	}
-	
-	if(track == TRACK_SHORT) g_timers[client][ShortEndReached] = true;
-	
+
 	//Record Info
 	new RecordId;
 	new Float:RecordTime;

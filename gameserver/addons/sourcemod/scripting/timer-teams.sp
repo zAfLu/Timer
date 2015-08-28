@@ -21,7 +21,6 @@ new String:g_currentMap[64];
 new g_clientTeammate[MAXPLAYERS+1]=0;
 
 new bool:g_bClientCoop[MAXPLAYERS+1];
-new g_iCoopCountdown[MAXPLAYERS+1];
 
 new bool:g_bClientChallenge[MAXPLAYERS+1];
 new g_iChallengeCountdown[MAXPLAYERS+1];
@@ -41,10 +40,7 @@ new Handle:g_OnChallengeConfirm;
 new Handle:g_OnChallengeWin;
 new Handle:g_OnChallengeForceEnd;
 
-new Handle:g_OnCoopStart;
 new Handle:g_OnCoopConfirm;
-new Handle:g_OnCoopWin;
-new Handle:g_OnCoopForceEnd;
 
 new Float:g_fLastRun[MAXPLAYERS+1];
 
@@ -64,28 +60,40 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 	RegPluginLibrary("timer-teams");
 	CreateNative("Timer_GetChallengeStatus", Native_GetChallengeStatus);
 	CreateNative("Timer_GetCoopStatus", Native_GetCoopStatus);
-	
+
 	CreateNative("Timer_GetClientTeammate", Native_GetClientTeammate);
 	CreateNative("Timer_SetClientTeammate", Native_SetClientTeammate);
-	
+
 	return APLRes_Success;
 }
 
 public OnPluginStart()
 {
 	g_timerPhysics = LibraryExists("timer-physics");
-	
+
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	LoadTranslations("timer.phrases");
 
 	if(g_Settings[ChallengeEnable]) RegConsoleCmd("sm_challenge", Command_Challenge);
-	if(g_Settings[CoopEnable]) RegConsoleCmd("sm_coop", Command_Coop);
+
+	if(g_Settings[CoopEnable])
+	{
+		RegConsoleCmd("sm_coop", Command_Coop);
+		RegConsoleCmd("sm_partner", Command_Coop);
+		RegConsoleCmd("sm_mate", Command_Coop);
+		RegConsoleCmd("sm_party", Command_Coop);
+
+		RegConsoleCmd("sm_uncoop", Command_UnCoop);
+		RegConsoleCmd("sm_unpartner", Command_UnCoop);
+		RegConsoleCmd("sm_unmate", Command_UnCoop);
+		RegConsoleCmd("sm_unparty", Command_UnCoop);
+	}
 
 	Sound_ChallengeStart = CreateConVar("timer_sound_challenge_start", "ui/freeze_cam.wav", "");
 	Sound_TimerOwned = CreateConVar("timer_sound_owned", "ui/freeze_cam.wav", "");
-	
+
 	HookConVarChange(Sound_ChallengeStart, Action_OnSettingsChange);
 	HookConVarChange(Sound_TimerOwned, Action_OnSettingsChange);
 
@@ -93,14 +101,11 @@ public OnPluginStart()
 	g_OnChallengeStart = CreateGlobalForward("OnChallengeStart", ET_Event, Param_Cell,Param_Cell);
 	g_OnChallengeWin = CreateGlobalForward("OnChallengeWin", ET_Event, Param_Cell,Param_Cell);
 	g_OnChallengeForceEnd = CreateGlobalForward("OnChallengeForceEnd", ET_Event, Param_Cell,Param_Cell);
-	
+
 	g_OnCoopConfirm = CreateGlobalForward("OnCoopConfirm", ET_Event, Param_Cell,Param_Cell,Param_Cell);
-	g_OnCoopStart = CreateGlobalForward("OnCoopStart", ET_Event, Param_Cell,Param_Cell);
-	g_OnCoopWin = CreateGlobalForward("OnCoopWin", ET_Event, Param_Cell,Param_Cell);
-	g_OnCoopForceEnd = CreateGlobalForward("OnCoopForceEnd", ET_Event, Param_Cell,Param_Cell);
-	
+
 	AutoExecConfig(true, "timer/timer-teams");
-	
+
 	HookEvent("player_spawn", Event_Reset);
 	HookEvent("player_connect", Event_Reset);
 	HookEvent("player_disconnect", Event_Reset);
@@ -111,10 +116,10 @@ public OnPluginStart()
 public OnMapStart()
 {
 	GetCurrentMap(g_currentMap, sizeof(g_currentMap));
-	
+
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	for (new i = 1; i <= MaxClients; i++)
 	{
 		g_clientTeammate[i] = 0;
@@ -132,7 +137,7 @@ public OnLibraryAdded(const String:name[])
 }
 
 public OnLibraryRemoved(const String:name[])
-{	
+{
 	if (StrEqual(name, "timer-physics"))
 	{
 		g_timerPhysics = false;
@@ -148,7 +153,7 @@ public CacheSounds()
 {
 	GetConVarString(Sound_ChallengeStart, SND_CHALLENGE_START, sizeof(SND_CHALLENGE_START));
 	PrepareSound(SND_CHALLENGE_START);
-	
+
 	GetConVarString(Sound_TimerOwned, SND_TIMER_OWNED, sizeof(SND_TIMER_OWNED));
 	PrepareSound(SND_TIMER_OWNED);
 }
@@ -196,21 +201,19 @@ public OnClientStartTouchZoneType(client, MapZoneType:type)
 {
 	if(!client)
 		return;
-	
+
 	new mate = Timer_GetClientTeammate(client);
-	
+
 	if(!mate)
 		return;
-	
+
 	if(!g_bClientChallenge[client] && !g_bClientCoop[client])
 		return;
-		
+
 	if (type == ZtEnd)
 	{
-		if(g_bClientChallenge[client]) 
+		if(g_bClientChallenge[client])
 			EndChallenge(client, 0);
-		else if (g_bClientCoop[client] && Timer_IsPlayerTouchingZoneType(mate, ZtEnd)) 
-			EndCoop(client, 0);
 	}
 }
 
@@ -218,15 +221,15 @@ public OnClientEndTouchZoneType(client, MapZoneType:type)
 {
 	if(!client)
 		return;
-	
+
 	new mate = Timer_GetClientTeammate(client);
-	
+
 	if(!mate)
 		return;
-	
+
 	if(!g_bClientChallenge[client] && !g_bClientCoop[client])
 		return;
-		
+
 	if (type == ZtStart)
 	{
 		if(g_Settings[CoopOnly])
@@ -244,7 +247,7 @@ public Action:Command_Challenge(client, args)
 {
 	if(!client)
 		return Plugin_Handled;
-	
+
 	if(g_bClientCoop[client])
 	{
 		CPrintToChat(client, "%s You are already challenging.", PLUGIN_PREFIX2);
@@ -253,12 +256,12 @@ public Action:Command_Challenge(client, args)
 	{
 		CPrintToChat(client, "%s You are already in coop mode.", PLUGIN_PREFIX2);
 	}
-	else 
+	else
 	{
 		new Handle:menu = CreateMenu(Handle_PointSelectMenu);
-		
+
 		SetMenuTitle(menu, "Select bet");
-		
+
 		decl String:buffer[32];
 		FormatEx(buffer, sizeof(buffer), "%d", g_Settings[ChallengeBet1]);
 		AddMenuItem(menu, buffer, "Very Low");
@@ -270,13 +273,13 @@ public Action:Command_Challenge(client, args)
 		AddMenuItem(menu, buffer, "Pro");
 		FormatEx(buffer, sizeof(buffer), "%d", g_Settings[ChallengeBet5]);
 		AddMenuItem(menu, buffer, "Match");
-		
+
 		DisplayMenu(menu, client, MENU_TIME_FOREVER);
 	}
-		
+
 	return Plugin_Handled;
 }
-	
+
 public Handle_PointSelectMenu(Handle:menu, MenuAction:action, client, itemNum)
 {
 	if ( action == MenuAction_Select )
@@ -292,50 +295,50 @@ public Handle_PointSelectMenu(Handle:menu, MenuAction:action, client, itemNum)
 }
 
 Menu_SelectChallengeMate(client)
-{	
+{
 	new Handle:menu = CreateMenu(MenuHandlerChallenge);
 	SetMenuTitle(menu, "Select your opponent");
-	
+
 	new iCount = 0;
-	
+
 	for (new i = 1; i <= MaxClients; i++)
 	{
 		if(!Client_IsValid(i))
 		{
 			continue;
 		}
-		
+
 		if(IsFakeClient(i))
 		{
 			continue;
 		}
-		
+
 		if(client == i)
 		{
 			continue;
 		}
-		
+
 		if(g_bClientCoop[i])
 		{
 			continue;
 		}
-		
+
 		if(g_bClientChallenge[i])
 		{
 			continue;
 		}
-		
+
 		if(GetGameTime() < g_fIgnoreTime[i])
 		{
 			continue;
 		}
-		
+
 		decl String:name2[32];
 		FormatEx(name2, sizeof(name2), "%N", i);
 		decl String:zone2[32];
 		FormatEx(zone2,sizeof(zone2),"%d", i);
 		AddMenuItem(menu, zone2, name2);
-		
+
 		iCount++;
 	}
 
@@ -344,7 +347,7 @@ Menu_SelectChallengeMate(client)
 		CPrintToChat(client, "%s No Target found.", PLUGIN_PREFIX2);
 		return;
 	}
-	
+
 	SetMenuExitButton(menu, true);
 	DisplayMenu(menu, client, 20);
 }
@@ -356,18 +359,18 @@ public MenuHandlerChallenge(Handle:menu, MenuAction:action, creator, param2)
 		decl String:info[100], String:info2[100];
 		new bool:found = GetMenuItem(menu, param2, info, sizeof(info), _, info2, sizeof(info2));
 		new client = StringToInt(info);
-		
+
 		if(IsFakeClient(client))
 		{
 			StartChallenge(client, creator);
-			
+
 			Call_StartForward(g_OnChallengeConfirm);
 			Call_PushCell(client);
 			Call_PushCell(creator);
 			Call_PushCell(g_iBet[creator]);
 			Call_Finish();
 		}
-		
+
 		if(found)
 		{
 			if(IsClientInGame(client))
@@ -378,12 +381,12 @@ public MenuHandlerChallenge(Handle:menu, MenuAction:action, creator, param2)
 					SetMenuTitle(menu2, "Confirm Challenge with %N on style: %s.", creator, g_Physics[Timer_GetStyle(creator)][StyleName]);
 				}
 				else SetMenuTitle(menu2, "Confirm Challenge with %N.", creator);
-			
+
 				decl String:name[32];
 				FormatEx(name, sizeof(name),"%d", creator);
 				AddMenuItem(menu2, name, "Yes");
 				AddMenuItem(menu2, "no", "no");
-			
+
 				SetMenuExitButton(menu, true);
 				DisplayMenu(menu2, client, 20);
 			}
@@ -398,29 +401,29 @@ public MenuHandlerChallengeConfirm(Handle:menu, MenuAction:action, client, param
 		decl String:info[100], String:info2[100];
 		new bool:found = GetMenuItem(menu, param2, info, sizeof(info), _, info2, sizeof(info2));
 		new target = StringToInt(info);
-		
+
 		if(!target || target <= 0)
 		{
 			CPrintToChat(client, "%s Invalid target. Something went wrong, sry.", PLUGIN_PREFIX2);
 			return;
 		}
-		
+
 		if(StrEqual(info, "no"))
 		{
 			g_fIgnoreTime[client] = GetGameTime()+g_Settings[ChallengeIgnoreCooldown];
 			if(g_Settings[ChallengeIgnoreCooldown] > 0) CPrintToChat(client, "%s You can't be challenged next %ds.", PLUGIN_PREFIX2, RoundToFloor(g_Settings[ChallengeIgnoreCooldown]));
-			
-			if(IsClientInGame(target)) 
-				if(g_Settings[ChallengeIgnoreCooldown] > 0) 
+
+			if(IsClientInGame(target))
+				if(g_Settings[ChallengeIgnoreCooldown] > 0)
 					CPrintToChat(target, "%s %N rejected your challenge request. You have to wait %ds to ask for a new challenge", PLUGIN_PREFIX2, client, RoundToFloor(g_Settings[ChallengeIgnoreCooldown]));
-				else 
+				else
 					CPrintToChat(target, "%s %N rejected your challenge request.", PLUGIN_PREFIX2, client);
 		}
 		else if(found)
 		{
 			g_iBet[client] = g_iBet[target];
 			StartChallenge(client, target);
-			
+
 			Call_StartForward(g_OnChallengeConfirm);
 			Call_PushCell(client);
 			Call_PushCell(target);
@@ -434,25 +437,25 @@ StartChallenge(client, target)
 {
 	FakeClientCommand(client, "sm_start");
 	FakeClientCommand(target, "sm_start");
-	
+
 	Timer_SetClientTeammate(client, target, 1);
 	Timer_SetStyle(client, Timer_GetStyle(target));
-	
+
 	SetEntityMoveType(client, MOVETYPE_NONE);
 	SetEntityMoveType(target, MOVETYPE_NONE);
-	
+
 	Timer_SetClientHide(client, 1);
 	Timer_SetClientHide(target, 1);
-	
+
 	g_iChallengeCountdown[client] = 5;
 	g_iChallengeCountdown[target] = 5;
-	
+
 	g_fLastRun[client] = 0.0;
 	g_fLastRun[client] = 0.0;
-	
+
 	Timer_SetTrack(client, TRACK_NORMAL);
 	Timer_SetTrack(target, TRACK_NORMAL);
-	
+
 	g_bClientChallenge[client] = true;
 	g_bClientChallenge[target] = true;
 
@@ -464,11 +467,11 @@ public Action:ChallengeCountdown(Handle:timer, any:client)
 {
 	if(!IsClientInGame(client))
 		return Plugin_Stop;
-	
+
 	PrintCenterText(client, "%d", g_iChallengeCountdown[client]);
-	
+
 	g_iChallengeCountdown[client]--;
-	
+
 	if(g_iChallengeCountdown[client] <= 0)
 	{
 		PrintCenterText(client, "GO GO GO !!!");
@@ -476,20 +479,20 @@ public Action:ChallengeCountdown(Handle:timer, any:client)
 		EmitSoundToClient(client, SND_CHALLENGE_START);
 		SetEntityMoveType(client, MOVETYPE_WALK);
 		new mate = Timer_GetClientTeammate(client);
-		
+
 		Call_StartForward(g_OnChallengeStart);
 		Call_PushCell(client);
 		Call_PushCell(mate);
 		Call_Finish();
-		
+
 		Timer_Start(client);
 		Timer_Start(mate);
-		
+
 		new Float:time = GetGameTime();
-		
+
 		g_fStartTime[client] = time;
 		g_fStartTime[mate] = time;
-		
+
 		return Plugin_Stop;
 	}
 
@@ -501,9 +504,9 @@ public Action:Command_Coop(client, args)
 	new Handle:menu = CreateMenu(MenuHandlerCoop);
 	SetMenuTitle(menu, "Teammate Select");
 	//new bool:isadmin = Client_IsAdmin(client);
-	
+
 	new iCount = 0;
-	
+
 	//show rest
 	for (new i = 1; i <= MaxClients; i++)
 	{
@@ -523,25 +526,25 @@ public Action:Command_Coop(client, args)
 		{
 			continue;
 		}
-		
+
 		decl String:name2[32];
 		FormatEx(name2, sizeof(name2), "%N", i);
 		decl String:zone2[32];
 		FormatEx(zone2,sizeof(zone2),"%d", i);
 		AddMenuItem(menu, zone2, name2);
-		
+
 		iCount++;
 	}
-	
+
 	if(iCount == 0)
 	{
 		CPrintToChat(client, "%s No Target found.", PLUGIN_PREFIX2);
 		return Plugin_Handled;
 	}
-	
+
 	SetMenuExitButton(menu, true);
 	DisplayMenu(menu, client, 20);
-     
+
 	return Plugin_Handled;
 }
 
@@ -565,12 +568,12 @@ public MenuHandlerCoop(Handle:menu, MenuAction:action, client, param2)
 					new Handle:menu2 = CreateMenu(MenuHandlerCoopConfirm);
 					SetMenuTitle(menu2, "Confirm Coop-Modus with %N", client);
 					//new bool:isadmin = Client_IsAdmin(client);
-				
+
 					decl String:xclient[32];
 					FormatEx(xclient, sizeof(xclient),"%d", client);
 					AddMenuItem(menu2, xclient, "Yes");
 					AddMenuItem(menu2, "no", "no");
-				
+
 					SetMenuExitButton(menu, true);
 					DisplayMenu(menu2, target, 20);
 				}
@@ -588,10 +591,10 @@ public MenuHandlerCoopConfirm(Handle:menu, MenuAction:action, client, param2)
 		new target = StringToInt(info);
 		if(StrEqual(info, "no"))
 		{
-			
+
 		}
 		else if(found)
-		{	
+		{
 			if(!target || target <= 0)
 			{
 			}
@@ -600,7 +603,7 @@ public MenuHandlerCoopConfirm(Handle:menu, MenuAction:action, client, param2)
 				StartCoop(client, target);
 			}
 		}
-		
+
 		Call_StartForward(g_OnCoopConfirm);
 		Call_PushCell(client);
 		Call_PushCell(target);
@@ -612,57 +615,33 @@ public MenuHandlerCoopConfirm(Handle:menu, MenuAction:action, client, param2)
 StartCoop(client, target)
 {
 	Timer_SetClientTeammate(client, target, 1);
-	Timer_SetTrack(client, Timer_GetTrack(target));
-	
-	SetEntityMoveType(client, MOVETYPE_NONE);
-	SetEntityMoveType(target, MOVETYPE_NONE);
-	
-	g_iCoopCountdown[client] = 5;
-	g_iCoopCountdown[target] = 5;
-	
-	Timer_SetTrack(client, TRACK_NORMAL);
-	Timer_SetTrack(target, TRACK_NORMAL);
-	
-	g_bClientCoop[client] = false;
-	g_bClientCoop[target] = false;
 
-	CreateTimer(1.0, CoopCountdown, client, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
-	CreateTimer(1.0, CoopCountdown, target, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+	Timer_SetTrack(client, Timer_GetTrack(target));
+
+	Timer_ClientTeleportLevel(client, LEVEL_START);
+	Timer_ClientTeleportLevel(target, LEVEL_START);
+
+	g_bClientCoop[client] = true;
+	g_bClientCoop[target] = true;
 }
 
-public Action:CoopCountdown(Handle:timer, any:client)
+public Action:Command_UnCoop(client, args)
 {
-	if(!IsClientInGame(client))
-		return Plugin_Stop;
-	
-	PrintCenterText(client, "%d", g_iCoopCountdown[client]);
-	
-	g_iCoopCountdown[client]--;
-	
-	SetEntityMoveType(client, MOVETYPE_NONE);
-	Timer_ClientTeleportLevel(client, LEVEL_START);
-	
-	if(g_iCoopCountdown[client] <= 0)
-	{
-		PrintCenterText(client, "GO GO GO !!!");
-		SetEntityMoveType(client, MOVETYPE_WALK);
-		new mate = Timer_GetClientTeammate(client);
-		
-		g_bClientCoop[client] = true;
-		g_bClientCoop[mate] = true;
-		
-		Call_StartForward(g_OnCoopStart);
-		Call_PushCell(client);
-		Call_PushCell(mate);
-		Call_Finish();
-		
-		Timer_Start(client);
-		Timer_Start(mate);
-		
-		return Plugin_Stop;
-	}
+	new mate = g_clientTeammate[client];
 
-	return Plugin_Continue;
+	g_clientTeammate[client] = 0;
+	g_clientTeammate[mate] = 0;
+
+	Timer_SetTrack(client, TRACK_NORMAL);
+	Timer_SetTrack(mate, TRACK_NORMAL);
+
+	Timer_ClientTeleportLevel(client, LEVEL_START);
+	Timer_ClientTeleportLevel(mate, LEVEL_START);
+
+	g_bClientCoop[client] = false;
+	g_bClientCoop[mate] = false;
+
+	return Plugin_Handled;
 }
 
 new Float:g_fLastFail[MAXPLAYERS+1];
@@ -672,7 +651,7 @@ public Action:EndChallenge(client, force)
 	new mate = Timer_GetClientTeammate(client);
 	new Float:fTime = GetGameTime();
 	new bool:fake_death = false;
-	
+
 	if(g_bClientChallenge[client] && g_bClientChallenge[mate])
 	{
 		//Failed?
@@ -681,17 +660,17 @@ public Action:EndChallenge(client, force)
 			if(fTime - g_fLastFail[client] > 1.0)
 			{
 				g_fLastFail[client] = fTime;
-				
+
 				Call_StartForward(g_OnChallengeForceEnd);
 				Call_PushCell(client);
 				Call_PushCell(mate);
 				Call_Finish();
-				
+
 				if(fTime - g_fStartTime[mate] > g_Settings[ChallengeAbortTime])
 				{
 					CPrintToChat(client, "%s You have surrendered this challenge.", PLUGIN_PREFIX2);
 					CPrintToChat(mate, "%s %N has surrendered this challenge.", PLUGIN_PREFIX2, client);
-					
+
 					EndChallenge(mate, 2); //Mate Wins
 				}
 				else
@@ -702,78 +681,78 @@ public Action:EndChallenge(client, force)
 			}
 			else
 			{
-				
+
 			}
 		}
 		//We have a winner
 		else if(force == 0)
 		{
-			decl String:pname[32], String:pname2[32];	
-			
+			decl String:pname[32], String:pname2[32];
+
 			FormatEx(pname, sizeof(pname), "%N", client);
 			FormatEx(pname2, sizeof(pname2), "%N", mate);
-			
+
 			//Play sounds
 			EmitSoundToClient(client, SND_TIMER_OWNED);
 			EmitSoundToClient(mate, SND_TIMER_OWNED);
-			
+
 			new bool:enabled = false;
 			new jumps = 0;
 			new Float:time;
 			new fpsmax;
-			
+
 			if (g_Settings[ChallengeSaveRecords] && Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
 			{
 				new style = 0;
 				if (g_timerPhysics)
 					style = Timer_GetStyle(client);
-				
+
 				Timer_FinishRound(client, g_currentMap, time, jumps, style, fpsmax, 0);
 			}
-			
+
 			//Forward
 			Call_StartForward(g_OnChallengeWin);
 			Call_PushCell(client);
 			Call_PushCell(mate);
 			Call_Finish();
-			
+
 			fake_death = true;
 		}
 		else if(force == 2)
 		{
-			decl String:pname[32], String:pname2[32];	
-			
+			decl String:pname[32], String:pname2[32];
+
 			FormatEx(pname, sizeof(pname), "%N", client);
 			FormatEx(pname2, sizeof(pname2), "%N", mate);
-			
+
 			//Play sounds
 			EmitSoundToClient(client, SND_TIMER_OWNED);
 			EmitSoundToClient(mate, SND_TIMER_OWNED);
-			
+
 			//Forward
 			Call_StartForward(g_OnChallengeWin);
 			Call_PushCell(client);
 			Call_PushCell(mate);
 			Call_Finish();
-			
+
 			fake_death = true;
 		}
 	}
-	
+
 	//end challenge
 	g_bClientChallenge[client] = false;
 	g_bClientChallenge[mate] = false;
-	
+
 	//dissolve team
 	Timer_SetClientTeammate(client, 0, 0);
 	Timer_SetClientTeammate(mate, 0, 0);
-	
+
 	//Reset hide
 	Timer_SetClientHide(client, 0);
 	Timer_SetClientHide(mate, 0);
-	
+
 	g_fLastRun[client] = fTime;
-	
+
 	if(fake_death)
 	{
 		//Fake death event
@@ -786,63 +765,9 @@ public Action:EndChallenge(client, force)
 			FireEvent(event, false);
 		}
 	}
-	
-	Timer_Reset(client);
-	Timer_Reset(mate);
-}
 
-public Action:EndCoop(client, force)
-{
-	new mate = Timer_GetClientTeammate(client);
-	
-	if(g_bClientCoop[client] && g_bClientCoop[mate])
-	{
-		decl String:pname[32], String:pname2[32];	
-			
-		FormatEx(pname, sizeof(pname), "%N", client);
-		FormatEx(pname2, sizeof(pname2), "%N", mate);
-			
-		if (force == 1)
-		{
-			PrintToChatAll(PLUGIN_PREFIX, "Coop Fail", pname, pname2);
-			
-			Call_StartForward(g_OnCoopForceEnd);
-			Call_PushCell(client);
-			Call_PushCell(mate);
-			Call_Finish();
-		}
-		else if (force == 0)
-		{
-			PrintToChatAll(PLUGIN_PREFIX, "Coop Win", pname, pname2);
-			
-			Call_StartForward(g_OnCoopWin);
-			Call_PushCell(client);
-			Call_PushCell(mate);
-			Call_Finish();
-			
-			new bool:enabled; //tier running
-			new jumps; //current jump count
-			new fpsmax; //fps settings
-			new bool:track = false; //track timer running
-			new Float:time; //current time
-			
-			new style = Timer_GetStyle(client);
-			
-			Timer_GetClientTimer(client, enabled, time, jumps, fpsmax);
-			
-			Timer_FinishRound(client, g_currentMap, time, jumps, style, fpsmax, track);
-			Timer_FinishRound(mate, g_currentMap, time, jumps, style, fpsmax, track);
-		}
-	}
-	
-	g_bClientCoop[client] = false;
-	g_bClientCoop[mate] = false;
-	
 	Timer_Reset(client);
 	Timer_Reset(mate);
-	
-	Timer_SetClientTeammate(client, 0, 0);
-	Timer_SetClientTeammate(mate, 0, 0);
 }
 
 public OnTimerStopped(client)
@@ -868,16 +793,12 @@ public OnTimerReseted(client)
 ForceEnd(client)
 {
 	new mate = Timer_GetClientTeammate(client);
-	
+
 	if(mate != 0)
 	{
-		if(g_bClientChallenge[client])	
+		if(g_bClientChallenge[client])
 		{
 			EndChallenge(client,1);
-		}
-		else if (g_bClientCoop[client])
-		{
-			EndCoop(client,1);
 		}
 	}
 }
@@ -892,32 +813,32 @@ public Native_SetClientTeammate(Handle:plugin, numParams)
 	new client = GetNativeCell(1);
 	new mate = GetNativeCell(2);
 	new bool:teleport = bool:GetNativeCell(2);
-	
+
 	if(0 < client)
 	{
 		//Make sure there are no issues with other mates
 		new oldcmate = g_clientTeammate[client];
 		new oldmmate = g_clientTeammate[mate];
-		
+
 		g_clientTeammate[oldcmate] = 0;
 		g_clientTeammate[oldmmate] = 0;
 		g_clientTeammate[client] = 0;
 		g_clientTeammate[mate] = 0;
-		
+
 		if(0 < mate)
 		{
 			g_clientTeammate[client] = mate;
 			g_clientTeammate[mate] = client;
 		}
-		
+
 		if(teleport)
 		{
 			Timer_ClientTeleportLevel(client, LEVEL_START);
 			Timer_ClientTeleportLevel(mate, LEVEL_START);
-			
+
 			if(oldcmate && oldcmate != mate)
 				Timer_ClientTeleportLevel(oldcmate, LEVEL_START);
-			
+
 			if(oldmmate && oldmmate != client)
 				Timer_ClientTeleportLevel(oldmmate, LEVEL_START);
 		}

@@ -229,53 +229,53 @@ public OnPluginStart()
 	HookConVarChange(g_glitch4ZoneColor, Action_OnSettingsChange);
 	HookConVarChange(g_levelZoneColor, Action_OnSettingsChange);
 	HookConVarChange(g_bonusLevelZoneColor, Action_OnSettingsChange);
-	
+
 	HookConVarChange(Sound_TeleLast, Action_OnSettingsChange);
 	HookConVarChange(Sound_TeleNext, Action_OnSettingsChange);
 	HookConVarChange(Sound_TimerStart, Action_OnSettingsChange);
-	
-	
+
+
 	HookConVarChange(g_BeamBonusEndZonePath, Action_OnSettingsChange);
 	HookConVarChange(g_BeamBonusStartZonePath, Action_OnSettingsChange);
 	HookConVarChange(g_BeamDefaultPath, Action_OnSettingsChange);
 	HookConVarChange(g_BeamEndZonePath, Action_OnSettingsChange);
 	HookConVarChange(g_BeamStartZonePath, Action_OnSettingsChange);
-	
+
 	AutoExecConfig(true, "timer/timer-mapzones");
-	
+
 	LoadTranslations("timer.phrases");
-	
+
 	new Handle:topmenu;
 	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != INVALID_HANDLE))
 	{
 		OnAdminMenuReady(topmenu);
 	}
-	
-	RegAdminCmd("sm_zoneadminmode", Command_LevelAdminMode, ADMFLAG_RCON);
-	RegAdminCmd("sm_zonename", Command_LevelName, ADMFLAG_RCON);
-	RegAdminCmd("sm_zoneid", Command_LevelID, ADMFLAG_RCON);
-	RegAdminCmd("sm_zonetype", Command_LevelType, ADMFLAG_RCON);
-	RegAdminCmd("sm_zoneadd", Command_AddZone, ADMFLAG_RCON);
-	RegAdminCmd("sm_zonereload", Command_ReloadZones, ADMFLAG_SLAY);
-	RegAdminCmd("sm_npc_next", Command_NPC_Next, ADMFLAG_RCON);
-	RegAdminCmd("sm_zone", Command_AdminZone, ADMFLAG_ROOT);
-	RegAdminCmd("sm_zonedel", Command_AdminZoneDel, ADMFLAG_ROOT);
-	RegAdminCmd("sm_toggle_tp", Command_ToggleTeleporters, ADMFLAG_RCON);
-	
+
+	RegAdminCmd("sm_zoneadminmode", Command_LevelAdminMode, ADMFLAG_BAN);
+	RegAdminCmd("sm_zonename", Command_LevelName, ADMFLAG_BAN);
+	RegAdminCmd("sm_zoneid", Command_LevelID, ADMFLAG_BAN);
+	RegAdminCmd("sm_zonetype", Command_LevelType, ADMFLAG_BAN);
+	RegAdminCmd("sm_zoneadd", Command_AddZone, ADMFLAG_BAN);
+	RegAdminCmd("sm_zonereload", Command_ReloadZones, ADMFLAG_BAN);
+	RegAdminCmd("sm_npc_next", Command_NPC_Next, ADMFLAG_BAN);
+	RegAdminCmd("sm_zone", Command_AdminZone, ADMFLAG_BAN);
+	RegAdminCmd("sm_zonedel", Command_AdminZoneDel, ADMFLAG_BAN);
+	RegAdminCmd("sm_toggle_tp", Command_ToggleTeleporters, ADMFLAG_BAN);
+
 	RegConsoleCmd("sm_levels", Command_Levels);
 	RegConsoleCmd("sm_stage", Command_Levels);
-	
+
 	if(g_Settings[RestartEnable])
 	{
 		RegConsoleCmd("sm_restart", Command_Restart);
 		RegConsoleCmd("sm_r", Command_Restart);
 	}
-	
+
 	if(g_Settings[StartEnable])
 	{
 		RegConsoleCmd("sm_start", Command_Start);
 		RegConsoleCmd("sm_s", Command_Start);
-		
+
 		RegConsoleCmd("sm_bonusrestart", Command_BonusRestart);
 		RegConsoleCmd("sm_bonusstart", Command_BonusRestart);
 		RegConsoleCmd("sm_br", Command_BonusRestart);
@@ -290,27 +290,34 @@ public OnPluginStart()
 		RegConsoleCmd("sm_b5", Command_Bonus5Restart);
 		RegConsoleCmd("sm_bonus5", Command_Bonus5Restart);
 	}
-	
-	if(g_Settings[StuckEnable]) RegConsoleCmd("sm_stuck", Command_Stuck);
-	
+
+	if(g_Settings[StuckEnable])
+	{	
+		RegConsoleCmd("sm_stuck", Command_Stuck);
+		RegConsoleCmd("sm_resetstage", Command_Stuck);
+		RegConsoleCmd("sm_rs", Command_Stuck);
+		RegConsoleCmd("sm_gb", Command_Stuck);
+		RegConsoleCmd("sm_goback", Command_Stuck);
+	}
+
 	HookEvent("round_start", Event_RoundStart, EventHookMode_Post);
 	HookEvent("player_spawn", Event_PlayerSpawn);
-	
+
 	AddNormalSoundHook(Hook_NormalSound);
-	
+
 	g_ioffsCollisionGroup = FindSendPropOffs("CBaseEntity", "m_CollisionGroup");
-	
+
 	g_OnMapZonesLoaded = CreateGlobalForward("OnMapZonesLoaded", ET_Event);
-	
+
 	g_OnClientStartTouchZoneType = CreateGlobalForward("OnClientStartTouchZoneType", ET_Event, Param_Cell,Param_Cell);
 	g_OnClientEndTouchZoneType = CreateGlobalForward("OnClientEndTouchZoneType", ET_Event, Param_Cell,Param_Cell);
-	
+
 	g_OnClientStartTouchLevel = CreateGlobalForward("OnClientStartTouchLevel", ET_Event, Param_Cell, Param_Cell, Param_Cell);
 	g_OnClientStartTouchBonusLevel = CreateGlobalForward("OnClientStartTouchBonusLevel", ET_Event, Param_Cell, Param_Cell, Param_Cell);
-	
+
 	//Check timeleft to enforce mapchange
 	if(g_Settings[ForceMapEndEnable]) CreateTimer(1.0, CheckRemainingTime, INVALID_HANDLE, TIMER_REPEAT);
-	
+
 	//Fix rotation bugs
 	CreateTimer(300.0, Timer_FixAngRotation, _, TIMER_REPEAT);
 }
@@ -428,23 +435,17 @@ public OnTimerStarted(client)
 public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:angles[3], &weapon)
 {
 	if(buttons & IN_USE && IsPlayerTouchingZoneType(client, ZtBlockUse))
-	{
 		buttons &= ~IN_USE;
-	}
-	
+
 	if(buttons & IN_DUCK && IsPlayerTouchingZoneType(client, ZtBlockDuck))
-	{
 		buttons &= ~IN_DUCK;
-	}
-	
+
 	if(buttons & IN_ATTACK && IsPlayerTouchingZoneType(client, ZtBlockAttack))
-	{
 		buttons &= ~IN_ATTACK;
-	}
-	
+
 	if(g_mapZoneEditors[client][Step] == 0)
 		return Plugin_Continue;
-	
+
 	if (!IsPlayerAlive(client) || IsClientSourceTV(client))
 		return Plugin_Continue;
 
@@ -719,12 +720,14 @@ DisplaySelectZoneTypeMenu(client, category)
 	}
 	else if(category == 4)
 	{
+		AddMenuItem(menu, "bhop", "Allow Bhop");
 		AddMenuItem(menu, "auto", "Enable Auto Bhop");
 		AddMenuItem(menu, "noauto", "Disable Auto Bhop");
 		AddMenuItem(menu, "nogravity", "No Gravity verwrite");
 		AddMenuItem(menu, "noboost", "Disable Style Boost");
 		AddMenuItem(menu, "block", "Toggle Noblock");
 		AddMenuItem(menu, "antinoclip", "Anti Noclip");
+		AddMenuItem(menu, "anticp", "Anti cPmod");
 		AddMenuItem(menu, "back", "Back");
 	}
 	else if(category == 5)
@@ -1052,7 +1055,7 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 			}
 			else if(StrEqual(info, "bonuslevel"))
 			{
-				zonetype = ZtBonusCheckpoint;
+				zonetype = ZtBonusLevel;
 				new String:lvlbuffer[32];
 				
 				new hcount = LEVEL_BONUS_START;
@@ -1083,18 +1086,18 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 					hcount = g_mapZones[zone][Level_Id];
 				}
 				hcount++;
-				
+
 				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus2-Checkpoint %d", hcount);
-				
+
 				LvlID = hcount;
 				ZoneName = lvlbuffer;
 				valid = true;
 			}
 			else if(StrEqual(info, "bonus2level"))
 			{
-				zonetype = ZtBonus2Checkpoint;
+				zonetype = ZtBonus2Level;
 				new String:lvlbuffer[32];
-				
+
 				new hcount = LEVEL_BONUS2_START;
 				for (new zone = 0; zone < g_mapZonesCount; zone++)
 				{
@@ -1103,9 +1106,9 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 					hcount = g_mapZones[zone][Level_Id];
 				}
 				hcount++;
-				
+
 				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus2-Stage %d", hcount);
-				
+
 				LvlID = hcount;
 				ZoneName = lvlbuffer;
 				valid = true;
@@ -1114,7 +1117,7 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 			{
 				zonetype = ZtBonus3Checkpoint;
 				new String:lvlbuffer[32];
-				
+
 				new hcount = LEVEL_BONUS3_START;
 				for (new zone = 0; zone < g_mapZonesCount; zone++)
 				{
@@ -1123,18 +1126,18 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 					hcount = g_mapZones[zone][Level_Id];
 				}
 				hcount++;
-				
+
 				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus3-Checkpoint %d", hcount);
-				
+
 				LvlID = hcount;
 				ZoneName = lvlbuffer;
 				valid = true;
 			}
 			else if(StrEqual(info, "bonus3level"))
 			{
-				zonetype = ZtBonus3Checkpoint;
+				zonetype = ZtBonus3Level;
 				new String:lvlbuffer[32];
-				
+
 				new hcount = LEVEL_BONUS3_START;
 				for (new zone = 0; zone < g_mapZonesCount; zone++)
 				{
@@ -1143,9 +1146,9 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 					hcount = g_mapZones[zone][Level_Id];
 				}
 				hcount++;
-				
+
 				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus3-Stage %d", hcount);
-				
+
 				LvlID = hcount;
 				ZoneName = lvlbuffer;
 				valid = true;
@@ -1154,7 +1157,7 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 			{
 				zonetype = ZtBonus4Checkpoint;
 				new String:lvlbuffer[32];
-				
+
 				new hcount = LEVEL_BONUS4_START;
 				for (new zone = 0; zone < g_mapZonesCount; zone++)
 				{
@@ -1163,18 +1166,18 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 					hcount = g_mapZones[zone][Level_Id];
 				}
 				hcount++;
-				
+
 				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus4-Checkpoint %d", hcount);
-				
+
 				LvlID = hcount;
 				ZoneName = lvlbuffer;
 				valid = true;
 			}
 			else if(StrEqual(info, "bonus4level"))
 			{
-				zonetype = ZtBonus4Checkpoint;
+				zonetype = ZtBonus4Level;
 				new String:lvlbuffer[32];
-				
+
 				new hcount = LEVEL_BONUS4_START;
 				for (new zone = 0; zone < g_mapZonesCount; zone++)
 				{
@@ -1183,9 +1186,9 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 					hcount = g_mapZones[zone][Level_Id];
 				}
 				hcount++;
-				
+
 				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus4-Stage %d", hcount);
-				
+
 				LvlID = hcount;
 				ZoneName = lvlbuffer;
 				valid = true;
@@ -1194,7 +1197,7 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 			{
 				zonetype = ZtBonus5Checkpoint;
 				new String:lvlbuffer[32];
-				
+
 				new hcount = LEVEL_BONUS5_START;
 				for (new zone = 0; zone < g_mapZonesCount; zone++)
 				{
@@ -1203,18 +1206,18 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 					hcount = g_mapZones[zone][Level_Id];
 				}
 				hcount++;
-				
+
 				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus5-Checkpoint %d", hcount);
-				
+
 				LvlID = hcount;
 				ZoneName = lvlbuffer;
 				valid = true;
 			}
 			else if(StrEqual(info, "bonus5level"))
 			{
-				zonetype = ZtBonus5Checkpoint;
+				zonetype = ZtBonus5Level;
 				new String:lvlbuffer[32];
-				
+
 				new hcount = LEVEL_BONUS5_START;
 				for (new zone = 0; zone < g_mapZonesCount; zone++)
 				{
@@ -1223,9 +1226,9 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 					hcount = g_mapZones[zone][Level_Id];
 				}
 				hcount++;
-				
+
 				FormatEx(lvlbuffer, sizeof(lvlbuffer), "Bonus5-Stage %d", hcount);
-				
+
 				LvlID = hcount;
 				ZoneName = lvlbuffer;
 				valid = true;
@@ -1412,7 +1415,19 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 				ZoneName = "Block Attack";
 				valid = true;
 			}
-			
+			else if(StrEqual(info, "bhop"))
+			{
+				zonetype = ZtBhop;
+				ZoneName = "Allow Bhop";
+				valid = true;
+			}
+			else if(StrEqual(info, "aticp"))
+			{
+				zonetype = ZtAntiCp;
+				ZoneName = "Anti cPmod";
+				valid = true;
+			}
+
 			if(valid)
 			{
 				new Float:point1[3];
@@ -1427,14 +1442,14 @@ public ZoneTypeSelect(Handle:menu, MenuAction:action, client, itemNum)
 			}
 		}
 	}
-	else if (action == MenuAction_End) 
+	else if (action == MenuAction_End)
 	{
 		CloseHandle(menu);
 		ResetMapZoneEditor(client);
-	} 
-	else if (action == MenuAction_Cancel) 
+	}
+	else if (action == MenuAction_Cancel)
 	{
-		if (itemNum == MenuCancel_Exit && hTopMenu != INVALID_HANDLE) 
+		if (itemNum == MenuCancel_Exit && hTopMenu != INVALID_HANDLE)
 		{
 			DisplayTopMenu(hTopMenu, client, TopMenuPosition_LastCategory);
 			ResetMapZoneEditor(client);
@@ -1446,29 +1461,29 @@ public Action:OnTouchTrigger(caller, activator)
 {
 	if(!g_bZonesLoaded)
 		return;
-	
+
 	if(g_mapZonesCount < 1)
 		return;
-	
+
 	if (activator < 1 || activator > MaxClients)
 	{
 		return;
 	}
-	
+
 	if (!IsClientInGame(activator))
 	{
 		return;
 	}
-	
+
 	if (!IsPlayerAlive(activator))
 	{
 		return;
 	}
-	
+
 	new client = activator;
-	
+
 	ChangePlayerVelocity(client);
-	
+
 	return;
 }
 
@@ -1478,53 +1493,50 @@ public Action:StartTouchTrigger(caller, activator)
 		return;
 	if(g_mapZonesCount < 1)
 		return;
-	
+
 	if (activator < 1 || activator > MaxClients)
 		return;
-	
+
 	if (!IsClientInGame(activator))
 		return;
-	
+
 	new client = activator;
-	
+
 	new Float:vec[3];
 	GetClientAbsOrigin(client, vec);
-	
-	new mate;
-	if(g_timerTeams) mate = Timer_GetClientTeammate(client);
-	
+
 	new zone = g_MapZoneEntityZID[caller];
-	
+
 	if(zone < 0)
 		return;
-	
-	decl String:TriggerName[32]; 
+
+	decl String:TriggerName[32];
 	GetEntPropString(caller, Prop_Data, "m_iName", TriggerName, sizeof(TriggerName));
-	
+
 	if(adminmode == 1 && Client_IsAdmin(client))
 	{
 		if(GetGameMod() == MOD_CSGO)
 		{
 			PrintHintText(client, "ID: %d", zone);
 		}
-		else 
+		else
 		{
 			PrintCenterText(client, "ID: %d", zone);
 			DrawZone(zone, false);
 		}
 		return;
 	}
-	
+
 	Call_StartForward(g_OnClientStartTouchZoneType);
 	Call_PushCell(client);
 	Call_PushCell(g_mapZones[zone][Type]);
 	Call_Finish();
-	
+
 	g_bZone[zone][client] = true;
-	
+
 	if (!IsPlayerAlive(activator))
 		return;
-	
+
 	if (g_mapZones[zone][Type] == ZtReset)
 	{
 		Timer_Reset(client);
@@ -1533,257 +1545,236 @@ public Action:StartTouchTrigger(caller, activator)
 	{
 		if(!g_Settings[NoblockEnable])
 			SetPush(client);
-		
-		if(mate == 0)
-		{
-			g_iIgnoreEndTouchStart[client] = false;
-			g_iClientLastTrackZone[client] = zone;
-			
-			Timer_Stop(client, false);
-			Timer_SetTrack(client, TRACK_NORMAL);
-		}
+
+		g_iIgnoreEndTouchStart[client] = false;
+		g_iClientLastTrackZone[client] = zone;
+
+		Timer_Stop(client, false);
+		Timer_SetTrack(client, TRACK_NORMAL);
 	}
 	else if (g_mapZones[zone][Type] == ZtBonusStart)
 	{
 		g_iIgnoreEndTouchStart[client] = false;
 		g_iClientLastTrackZone[client] = zone;
-		
+
 		Timer_Stop(client, false);
 		Timer_SetTrack(client, TRACK_BONUS);
-		
+
 		if(g_timerLjStats) SetLJMode(client, false);
 	}
 	else if (g_mapZones[zone][Type] == ZtBonus2Start)
 	{
 		g_iIgnoreEndTouchStart[client] = false;
 		g_iClientLastTrackZone[client] = zone;
-		
+
 		Timer_Stop(client, false);
 		Timer_SetTrack(client, TRACK_BONUS2);
-		
+
 		if(g_timerLjStats) SetLJMode(client, false);
 	}
 	else if (g_mapZones[zone][Type] == ZtBonus3Start)
 	{
 		g_iIgnoreEndTouchStart[client] = false;
 		g_iClientLastTrackZone[client] = zone;
-		
+
 		Timer_Stop(client, false);
 		Timer_SetTrack(client, TRACK_BONUS3);
-		
+
 		if(g_timerLjStats) SetLJMode(client, false);
 	}
 	else if (g_mapZones[zone][Type] == ZtBonus4Start)
 	{
 		g_iIgnoreEndTouchStart[client] = false;
 		g_iClientLastTrackZone[client] = zone;
-		
+
 		Timer_Stop(client, false);
 		Timer_SetTrack(client, TRACK_BONUS4);
-		
+
 		if(g_timerLjStats) SetLJMode(client, false);
 	}
 	else if (g_mapZones[zone][Type] == ZtBonus5Start)
 	{
 		g_iIgnoreEndTouchStart[client] = false;
 		g_iClientLastTrackZone[client] = zone;
-		
+
 		Timer_Stop(client, false);
 		Timer_SetTrack(client, TRACK_BONUS5);
-		
+
 		if(g_timerLjStats) SetLJMode(client, false);
 	}
 	else if (g_mapZones[zone][Type] == ZtEnd)
 	{
 		if(!g_Settings[NoblockEnable])
 			SetPush(client);
-		
-		if(mate == 0)
+
+		//has player noclip?
+		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 		{
-			//has player noclip?
-			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			Timer_Stop(client, false);
+		}
+		else if(Timer_GetTrack(client) == TRACK_NORMAL)
+		{
+			g_iClientLastTrackZone[client] = zone;
+
+			if (Timer_Stop(client, false))
 			{
-				Timer_Stop(client, false);
-			}
-			else if(Timer_GetTrack(client) == TRACK_NORMAL)
-			{
-				g_iClientLastTrackZone[client] = zone;
-				
-				if (Timer_Stop(client, false))
+				new bool:enabled = false;
+				new jumps = 0;
+				new Float:time;
+				new fpsmax;
+
+				if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
 				{
-					new bool:enabled = false;
-					new jumps = 0;
-					new Float:time;
-					new fpsmax;
-					
-					if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
-					{
-						new difficulty = 0;
-						if (g_timerPhysics)
-							difficulty = Timer_GetStyle(client);
-						
-						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_NORMAL);
-					}
+					new difficulty = 0;
+					if (g_timerPhysics)
+						difficulty = Timer_GetStyle(client);
+
+					Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_NORMAL);
 				}
 			}
 		}
 	}
 	else if (g_mapZones[zone][Type] == ZtBonusEnd)
 	{
-		if(mate == 0)
+		//has player noclip?
+		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 		{
-			//has player noclip?
-			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			Timer_Stop(client, false);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS)
+		{
+			g_iClientLastTrackZone[client] = zone;
+
+			if (Timer_Stop(client, false))
 			{
-				Timer_Stop(client, false);
-			}
-			else if(Timer_GetTrack(client) == TRACK_BONUS)
-			{
-				g_iClientLastTrackZone[client] = zone;
-				
-				if (Timer_Stop(client, false))
+				new bool:enabled = false;
+				new jumps = 0;
+				new Float:time;
+				new fpsmax;
+
+				if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
 				{
-					new bool:enabled = false;
-					new jumps = 0;
-					new Float:time;
-					new fpsmax;
-					
-					if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
-					{
-						new difficulty = 0;
-						if (g_timerPhysics)
-							difficulty = Timer_GetStyle(client);
-						
-						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS);
-					}
+					new difficulty = 0;
+					if (g_timerPhysics)
+						difficulty = Timer_GetStyle(client);
+
+					Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS);
 				}
 			}
 		}
 	}
 	else if (g_mapZones[zone][Type] == ZtBonus2End)
 	{
-		if(mate == 0)
+		//has player noclip?
+		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 		{
-			//has player noclip?
-			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			Timer_Stop(client, false);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS2)
+		{
+			g_iClientLastTrackZone[client] = zone;
+
+			if (Timer_Stop(client, false))
 			{
-				Timer_Stop(client, false);
-			}
-			else if(Timer_GetTrack(client) == TRACK_BONUS2)
-			{
-				g_iClientLastTrackZone[client] = zone;
-				
-				if (Timer_Stop(client, false))
+				new bool:enabled = false;
+				new jumps = 0;
+				new Float:time;
+				new fpsmax;
+
+				if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
 				{
-					new bool:enabled = false;
-					new jumps = 0;
-					new Float:time;
-					new fpsmax;
-					
-					if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
-					{
-						new difficulty = 0;
-						if (g_timerPhysics)
-							difficulty = Timer_GetStyle(client);
-						
-						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS2);
-					}
+					new difficulty = 0;
+					if (g_timerPhysics)
+						difficulty = Timer_GetStyle(client);
+
+					Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS2);
 				}
 			}
 		}
 	}
 	else if (g_mapZones[zone][Type] == ZtBonus3End)
 	{
-		if(mate == 0)
+		//has player noclip?
+		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 		{
-			//has player noclip?
-			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			Timer_Stop(client, false);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS3)
+		{
+			g_iClientLastTrackZone[client] = zone;
+
+			if (Timer_Stop(client, false))
 			{
-				Timer_Stop(client, false);
-			}
-			else if(Timer_GetTrack(client) == TRACK_BONUS3)
-			{
-				g_iClientLastTrackZone[client] = zone;
-				
-				if (Timer_Stop(client, false))
+				new bool:enabled = false;
+				new jumps = 0;
+				new Float:time;
+				new fpsmax;
+
+				if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
 				{
-					new bool:enabled = false;
-					new jumps = 0;
-					new Float:time;
-					new fpsmax;
-					
-					if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
-					{
-						new difficulty = 0;
-						if (g_timerPhysics)
-							difficulty = Timer_GetStyle(client);
-						
-						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS3);
-					}
+					new difficulty = 0;
+					if (g_timerPhysics)
+						difficulty = Timer_GetStyle(client);
+
+					Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS3);
 				}
 			}
 		}
 	}
 	else if (g_mapZones[zone][Type] == ZtBonus4End)
 	{
-		if(mate == 0)
+		//has player noclip?
+		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 		{
-			//has player noclip?
-			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			Timer_Stop(client, false);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS4)
+		{
+			g_iClientLastTrackZone[client] = zone;
+
+			if (Timer_Stop(client, false))
 			{
-				Timer_Stop(client, false);
-			}
-			else if(Timer_GetTrack(client) == TRACK_BONUS4)
-			{
-				g_iClientLastTrackZone[client] = zone;
-				
-				if (Timer_Stop(client, false))
+				new bool:enabled = false;
+				new jumps = 0;
+				new Float:time;
+				new fpsmax;
+
+				if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
 				{
-					new bool:enabled = false;
-					new jumps = 0;
-					new Float:time;
-					new fpsmax;
-					
-					if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
-					{
-						new difficulty = 0;
-						if (g_timerPhysics)
-							difficulty = Timer_GetStyle(client);
-						
-						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS4);
-					}
+					new difficulty = 0;
+					if (g_timerPhysics)
+						difficulty = Timer_GetStyle(client);
+
+					Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS4);
 				}
 			}
 		}
 	}
 	else if (g_mapZones[zone][Type] == ZtBonus5End)
 	{
-		if(mate == 0)
+		//has player noclip?
+		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 		{
-			//has player noclip?
-			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
+			Timer_Stop(client, false);
+		}
+		else if(Timer_GetTrack(client) == TRACK_BONUS5)
+		{
+			g_iClientLastTrackZone[client] = zone;
+
+			if (Timer_Stop(client, false))
 			{
-				Timer_Stop(client, false);
-			}
-			else if(Timer_GetTrack(client) == TRACK_BONUS5)
-			{
-				g_iClientLastTrackZone[client] = zone;
-				
-				if (Timer_Stop(client, false))
+				new bool:enabled = false;
+				new jumps = 0;
+				new Float:time;
+				new fpsmax;
+
+				if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
 				{
-					new bool:enabled = false;
-					new jumps = 0;
-					new Float:time;
-					new fpsmax;
-					
-					if (Timer_GetClientTimer(client, enabled, time, jumps, fpsmax))
-					{
-						new difficulty = 0;
-						if (g_timerPhysics)
-							difficulty = Timer_GetStyle(client);
-						
-						Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS5);
-					}
+					new difficulty = 0;
+					if (g_timerPhysics)
+						difficulty = Timer_GetStyle(client);
+
+					Timer_FinishRound(client, g_currentMap, time, jumps, difficulty, fpsmax, TRACK_BONUS5);
 				}
 			}
 		}
@@ -1794,23 +1785,23 @@ public Action:StartTouchTrigger(caller, activator)
 	}
 	else if (g_mapZones[zone][Type] == ZtRestart)
 	{
-		if(Timer_GetTrack(client) == TRACK_BONUS) 
+		if(Timer_GetTrack(client) == TRACK_BONUS)
 		{
 			Tele_Level(client, LEVEL_BONUS_START);
 		}
-		else if(Timer_GetTrack(client) == TRACK_BONUS2) 
+		else if(Timer_GetTrack(client) == TRACK_BONUS2)
 		{
 			Tele_Level(client, LEVEL_BONUS2_START);
 		}
-		else if(Timer_GetTrack(client) == TRACK_BONUS3) 
+		else if(Timer_GetTrack(client) == TRACK_BONUS3)
 		{
 			Tele_Level(client, LEVEL_BONUS3_START);
 		}
-		else if(Timer_GetTrack(client) == TRACK_BONUS4) 
+		else if(Timer_GetTrack(client) == TRACK_BONUS4)
 		{
 			Tele_Level(client, LEVEL_BONUS4_START);
 		}
-		else if(Timer_GetTrack(client) == TRACK_BONUS5) 
+		else if(Timer_GetTrack(client) == TRACK_BONUS5)
 		{
 			Tele_Level(client, LEVEL_BONUS5_START);
 		}
@@ -1821,30 +1812,30 @@ public Action:StartTouchTrigger(caller, activator)
 	}
 	else if (g_mapZones[zone][Type] == ZtRestartNormalTimer)
 	{
-		if(Timer_GetTrack(client) == TRACK_NORMAL) 
+		if(Timer_GetTrack(client) == TRACK_NORMAL)
 		{
 			Tele_Level(client, LEVEL_START);
 		}
 	}
 	else if (g_mapZones[zone][Type] == ZtRestartBonusTimer)
 	{
-		if(Timer_GetTrack(client) == TRACK_BONUS) 
+		if(Timer_GetTrack(client) == TRACK_BONUS)
 		{
 			Tele_Level(client, LEVEL_BONUS_START);
 		}
-		else if(Timer_GetTrack(client) == TRACK_BONUS2) 
+		else if(Timer_GetTrack(client) == TRACK_BONUS2)
 		{
 			Tele_Level(client, LEVEL_BONUS2_START);
 		}
-		else if(Timer_GetTrack(client) == TRACK_BONUS3) 
+		else if(Timer_GetTrack(client) == TRACK_BONUS3)
 		{
 			Tele_Level(client, LEVEL_BONUS3_START);
 		}
-		else if(Timer_GetTrack(client) == TRACK_BONUS4) 
+		else if(Timer_GetTrack(client) == TRACK_BONUS4)
 		{
 			Tele_Level(client, LEVEL_BONUS4_START);
 		}
-		else if(Timer_GetTrack(client) == TRACK_BONUS5) 
+		else if(Timer_GetTrack(client) == TRACK_BONUS5)
 		{
 			Tele_Level(client, LEVEL_BONUS5_START);
 		}
@@ -1852,38 +1843,18 @@ public Action:StartTouchTrigger(caller, activator)
 	else if (g_mapZones[zone][Type] == ZtLast)
 	{
 		new lowestcheckpoint = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
-		
-		if(0 < mate && IsClientInGame(mate) && IsPlayerAlive(mate)) 
-		{
-			if(g_iClientLastTrackZone[client] > g_iClientLastTrackZone[mate]) lowestcheckpoint = g_mapZones[g_iClientLastTrackZone[mate]][Level_Id];
-			
-			Tele_Level(client, lowestcheckpoint);
-			Tele_Level(mate, lowestcheckpoint);
-			
-			if(Client_IsValid(client, true)) EmitSoundToClient(client, SND_TELE_LAST);
-			if(Client_IsValid(mate, true)) EmitSoundToClient(mate, SND_TELE_LAST);
-		}
-		else
-		{
-			if(Client_IsValid(client, true)) EmitSoundToClient(client, SND_TELE_LAST);
-			Tele_Level(client, lowestcheckpoint);
-		}
+		Tele_Level(client, lowestcheckpoint);
+
+		if(Client_IsValid(client, true))
+			EmitSoundToClient(client, SND_TELE_LAST);
 	}
 	else if (g_mapZones[zone][Type] == ZtNext)
 	{
-		if(0 < mate && IsClientInGame(mate) && IsPlayerAlive(mate) && g_mapZones[g_iClientLastTrackZone[client]][Level_Id] == g_mapZones[g_iClientLastTrackZone[mate]][Level_Id])
-		{
-			Tele_Level(client, g_mapZones[g_iClientLastTrackZone[client]][Level_Id]+1);
-			Tele_Level(mate, g_mapZones[g_iClientLastTrackZone[client]][Level_Id]+1);
-			if(Client_IsValid(client, true)) EmitSoundToClient(client, SND_TELE_NEXT);
-			if(Client_IsValid(mate, true)) EmitSoundToClient(mate, SND_TELE_NEXT);
-		}
-		else
-		{
-			Tele_Level(client, g_mapZones[g_iClientLastTrackZone[client]][Level_Id]+1);
-			if(Client_IsValid(client, true)) EmitSoundToClient(client, SND_TELE_NEXT);
-		}
-		
+		Tele_Level(client, g_mapZones[g_iClientLastTrackZone[client]][Level_Id]+1);
+
+		if(Client_IsValid(client, true))
+			EmitSoundToClient(client, SND_TELE_NEXT);
+
 	}
 	else if (g_mapZones[zone][Type] == ZtLevel)
 	{
@@ -1891,7 +1862,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -1905,7 +1876,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -1919,7 +1890,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchBonusLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -1933,7 +1904,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchBonusLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -1947,7 +1918,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchBonusLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -1961,7 +1932,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchBonusLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -1975,7 +1946,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchBonusLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -1989,7 +1960,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchBonusLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -2003,7 +1974,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchBonusLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -2017,7 +1988,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchBonusLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -2031,7 +2002,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchBonusLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -2045,7 +2016,7 @@ public Action:StartTouchTrigger(caller, activator)
 		{
 			new lastlevel = g_mapZones[g_iClientLastTrackZone[client]][Level_Id];
 			g_iClientLastTrackZone[client] = zone;
-			
+
 			Call_StartForward(g_OnClientStartTouchBonusLevel);
 			Call_PushCell(client);
 			Call_PushCell(g_mapZones[g_iClientLastTrackZone[client]][Level_Id]);
@@ -2075,7 +2046,7 @@ public Action:StartTouchTrigger(caller, activator)
 	{
 		SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", 0.7);
 	}
-	
+
 	return;
 }
 
@@ -2083,32 +2054,29 @@ public Action:EndTouchTrigger(caller, activator)
 {
 	if(!g_bZonesLoaded)
 		return;
-	
+
 	if(g_mapZonesCount < 1)
 		return;
-	
+
 	if (activator < 1 || activator > MaxClients)
 		return;
-	
+
 	if (!IsClientInGame(activator))
 		return;
-	
+
 	new client = activator;
-	
+
 	new Float:vec[3];
 	GetClientAbsOrigin(client, vec);
-	
-	new mate;
-	if(g_timerTeams) mate = Timer_GetClientTeammate(client);
-	
+
 	new zone = g_MapZoneEntityZID[caller];
-	
+
 	if(zone < 0)
 		return;
-	
-	decl String:TriggerName[32]; 
+
+	decl String:TriggerName[32];
 	GetEntPropString(caller, Prop_Data, "m_iName", TriggerName, sizeof(TriggerName));
-	
+
 	if(adminmode == 1 && Client_IsAdmin(client))
 	{
 		if(GetGameMod() == MOD_CSGO)
@@ -2118,26 +2086,26 @@ public Action:EndTouchTrigger(caller, activator)
 		else PrintCenterText(client, "ID: %d", zone);
 		return;
 	}
-	
+
 	Call_StartForward(g_OnClientEndTouchZoneType);
 	Call_PushCell(client);
 	Call_PushCell(g_mapZones[zone][Type]);
 	Call_Finish();
-	
+
 	g_bZone[zone][client] = false;
-	
+
 	if (!IsPlayerAlive(activator))
 		return;
-	
+
 	if(Timer_GetForceStyle() && !Timer_GetPickedStyle(client))
 	{
 		if(GetGameTime()-g_fSpawnTime[client] > 0.5)
 			Tele_Level(client, LEVEL_START);
-		
+
 		FakeClientCommand(client, "sm_style");
 		CPrintToChat(client, PLUGIN_PREFIX, "Force Mode");
 	}
-	
+
 	if(g_mapZones[zone][Type] == ZtEnd)
 	{
 		if(!g_Settings[NoblockEnable])
@@ -2147,24 +2115,24 @@ public Action:EndTouchTrigger(caller, activator)
 	{
 		if(!g_Settings[NoblockEnable])
 			SetBlock(client);
-		
-		if(mate == 0 && CheckIllegalTeleport(client))
+
+		if(CheckIllegalTeleport(client))
 		{
 			if(Timer_IsPlayerTouchingZoneType(client, ZtStop))
 				return;
-			
+
 			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 				return;
-			
+
 			if(g_iIgnoreEndTouchStart[client])
 			{
 				g_iIgnoreEndTouchStart[client] = false;
 				return;
 			}
-			
+
 			if(IsClientConnected(client))
 				EmitSoundToClient(client, SND_TIMER_START);
-			
+
 			Timer_Restart(client);
 			Timer_SetTrack(client, TRACK_NORMAL);
 		}
@@ -2173,16 +2141,19 @@ public Action:EndTouchTrigger(caller, activator)
 	{
 		if(Timer_IsPlayerTouchingZoneType(client, ZtStop) || !CheckIllegalTeleport(client))
 			return;
-		
+
 		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 			return;
-		
+
 		if(g_iIgnoreEndTouchStart[client])
 		{
 			g_iIgnoreEndTouchStart[client] = false;
 			return;
 		}
-		if(IsClientConnected(client)) EmitSoundToClient(client, SND_TIMER_START);
+
+		if(IsClientConnected(client))
+			EmitSoundToClient(client, SND_TIMER_START);
+
 		Timer_Restart(client);
 		Timer_SetTrack(client, TRACK_BONUS);
 	}
@@ -2190,16 +2161,19 @@ public Action:EndTouchTrigger(caller, activator)
 	{
 		if(Timer_IsPlayerTouchingZoneType(client, ZtStop) || !CheckIllegalTeleport(client))
 			return;
-		
+
 		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 			return;
-		
+
 		if(g_iIgnoreEndTouchStart[client])
 		{
 			g_iIgnoreEndTouchStart[client] = false;
 			return;
 		}
-		if(IsClientConnected(client)) EmitSoundToClient(client, SND_TIMER_START);
+
+		if(IsClientConnected(client))
+			EmitSoundToClient(client, SND_TIMER_START);
+
 		Timer_Restart(client);
 		Timer_SetTrack(client, TRACK_BONUS2);
 	}
@@ -2207,16 +2181,19 @@ public Action:EndTouchTrigger(caller, activator)
 	{
 		if(Timer_IsPlayerTouchingZoneType(client, ZtStop) || !CheckIllegalTeleport(client))
 			return;
-		
+
 		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 			return;
-		
+
 		if(g_iIgnoreEndTouchStart[client])
 		{
 			g_iIgnoreEndTouchStart[client] = false;
 			return;
 		}
-		if(IsClientConnected(client)) EmitSoundToClient(client, SND_TIMER_START);
+
+		if(IsClientConnected(client))
+			EmitSoundToClient(client, SND_TIMER_START);
+
 		Timer_Restart(client);
 		Timer_SetTrack(client, TRACK_BONUS3);
 	}
@@ -2224,16 +2201,19 @@ public Action:EndTouchTrigger(caller, activator)
 	{
 		if(Timer_IsPlayerTouchingZoneType(client, ZtStop) || !CheckIllegalTeleport(client))
 			return;
-		
+
 		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 			return;
-		
+
 		if(g_iIgnoreEndTouchStart[client])
 		{
 			g_iIgnoreEndTouchStart[client] = false;
 			return;
 		}
-		if(IsClientConnected(client)) EmitSoundToClient(client, SND_TIMER_START);
+
+		if(IsClientConnected(client))
+			EmitSoundToClient(client, SND_TIMER_START);
+
 		Timer_Restart(client);
 		Timer_SetTrack(client, TRACK_BONUS4);
 	}
@@ -2241,16 +2221,19 @@ public Action:EndTouchTrigger(caller, activator)
 	{
 		if(Timer_IsPlayerTouchingZoneType(client, ZtStop) || !CheckIllegalTeleport(client))
 			return;
-		
+
 		if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 			return;
-		
+
 		if(g_iIgnoreEndTouchStart[client])
 		{
 			g_iIgnoreEndTouchStart[client] = false;
 			return;
 		}
-		if(IsClientConnected(client)) EmitSoundToClient(client, SND_TIMER_START);
+
+		if(IsClientConnected(client))
+			EmitSoundToClient(client, SND_TIMER_START);
+
 		Timer_Restart(client);
 		Timer_SetTrack(client, TRACK_BONUS5);
 	}
@@ -2272,40 +2255,40 @@ public Action:EndTouchTrigger(caller, activator)
 	{
 		SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", 1.0);
 	}
-	
+
 	return;
-}  
+}
 
 public Action:NPC_Use(caller, activator)
 {
 	decl Float:camangle[3], Float:vecClient[3], Float:vecCaller[3];
-	
+
 	decl Float:vec[3];
 	Entity_GetAbsOrigin(caller, vecCaller);
-	GetClientAbsOrigin(activator, vecClient);   
-	
+	GetClientAbsOrigin(activator, vecClient);
+
 	MakeVectorFromPoints(vecCaller, vecClient, vec);
 	GetVectorAngles(vec, camangle);
 	camangle[0] = 0.0;
 	camangle[2] = 0.0;
-	
+
 	TeleportEntity(caller, NULL_VECTOR, camangle, NULL_VECTOR);
-	
+
 	for (new i = 0; i < g_mapZonesCount; i++)
 	{
 		if(g_mapZones[i][NPC] == caller)
 		{
 			g_iClientLastTrackZone[activator] = i;
-			
+
 			Menu_NPC_Next(activator, i);
-			
+
 			break;
 		}
 	}
-	
+
 	SetEntData(caller, g_ioffsCollisionGroup, 17, 4, true);
 	CreateTimer(0.5, SetBlockable, caller, TIMER_FLAG_NO_MAPCHANGE);
-	
+
 	return Plugin_Continue;
 }
 
@@ -2313,16 +2296,16 @@ public OnConfigsExecuted()
 {
 	//Sounds
 	CacheSounds();
-	
+
 	//Sprites
 	GetConVarString(g_BeamDefaultPath, g_sBeamDefaultPath, sizeof(g_sBeamDefaultPath));
 	GetConVarString(g_BeamStartZonePath, g_sBeamStartZonePath, sizeof(g_sBeamStartZonePath));
 	GetConVarString(g_BeamEndZonePath, g_sBeamEndZonePath, sizeof(g_sBeamEndZonePath));
 	GetConVarString(g_BeamBonusStartZonePath, g_sBeamBonusStartZonePath, sizeof(g_sBeamBonusStartZonePath));
 	GetConVarString(g_BeamBonusEndZonePath, g_sBeamBonusEndZonePath, sizeof(g_sBeamBonusEndZonePath));
-	
+
 	InitZoneSprites();
-	
+
 	//Colors
 	new String:buffer[128];
 	GetConVarString(g_startMapZoneColor, buffer, sizeof(buffer));
@@ -2353,10 +2336,10 @@ CacheSounds()
 {
 	GetConVarString(Sound_TeleLast, SND_TELE_LAST, sizeof(SND_TELE_LAST));
 	PrepareSound(SND_TELE_LAST);
-	
+
 	GetConVarString(Sound_TeleNext, SND_TELE_NEXT, sizeof(SND_TELE_NEXT));
 	PrepareSound(SND_TELE_NEXT);
-	
+
 	GetConVarString(Sound_TimerStart, SND_TIMER_START, sizeof(SND_TIMER_START));
 	PrepareSound(SND_TIMER_START);
 }
@@ -2364,9 +2347,9 @@ CacheSounds()
 public PrepareSound(String: sound[MAX_FILE_LEN])
 {
 	decl String:fileSound[MAX_FILE_LEN];
-	
+
 	FormatEx(fileSound, MAX_FILE_LEN, "sound/%s", sound);
-	
+
 	if (FileExists(fileSound))
 	{
 		PrecacheSound(sound, true);
@@ -2381,7 +2364,7 @@ public PrepareSound(String: sound[MAX_FILE_LEN])
 InitZoneSprites()
 {
 	new String:spritebuffer[256];
-	
+
 	//default sprite
 	GetConVarString(g_BeamDefaultPath, g_sBeamDefaultPath, sizeof(g_sBeamDefaultPath));
 	Format(spritebuffer, sizeof(spritebuffer), "%s.vmt", g_sBeamDefaultPath);
@@ -2392,7 +2375,7 @@ InitZoneSprites()
 		Format(spritebuffer, sizeof(spritebuffer), "%s.vtf", g_sBeamDefaultPath);
 		AddFileToDownloadsTable(spritebuffer);
 	}
-	
+
 	//start sprite
 	GetConVarString(g_BeamStartZonePath, g_sBeamStartZonePath, sizeof(g_sBeamStartZonePath));
 	Format(spritebuffer, sizeof(spritebuffer), "%s.vmt", g_sBeamStartZonePath);
@@ -2403,7 +2386,7 @@ InitZoneSprites()
 		Format(spritebuffer, sizeof(spritebuffer), "%s.vtf", g_sBeamStartZonePath);
 		AddFileToDownloadsTable(spritebuffer);
 	}
-	
+
 	//end sprite
 	GetConVarString(g_BeamEndZonePath, g_sBeamEndZonePath, sizeof(g_sBeamEndZonePath));
 	Format(spritebuffer, sizeof(spritebuffer), "%s.vmt", g_sBeamEndZonePath);
@@ -2414,7 +2397,7 @@ InitZoneSprites()
 		Format(spritebuffer, sizeof(spritebuffer), "%s.vtf", g_sBeamEndZonePath);
 		AddFileToDownloadsTable(spritebuffer);
 	}
-	
+
 	//bonus start sprite
 	GetConVarString(g_BeamBonusStartZonePath, g_sBeamBonusStartZonePath, sizeof(g_sBeamBonusStartZonePath));
 	Format(spritebuffer, sizeof(spritebuffer), "%s.vmt", g_sBeamBonusStartZonePath);
@@ -2425,7 +2408,7 @@ InitZoneSprites()
 		Format(spritebuffer, sizeof(spritebuffer), "%s.vtf", g_sBeamBonusStartZonePath);
 		AddFileToDownloadsTable(spritebuffer);
 	}
-	
+
 	//bonus end sprite
 	GetConVarString(g_BeamBonusEndZonePath, g_sBeamBonusEndZonePath, sizeof(g_sBeamBonusEndZonePath));
 	Format(spritebuffer, sizeof(spritebuffer), "%s.vmt", g_sBeamBonusEndZonePath);
@@ -2444,16 +2427,16 @@ public Action:CheckEntitysLoaded(Handle:timer)
 	{
 		if (g_hSQL == INVALID_HANDLE)
 			ConnectSQL();
-		
+
 		if (g_hSQL != INVALID_HANDLE)
 		{
 			Timer_LogInfo("No mapzone entitys spawned, reloading...");
 			LoadMapZones();
 		}
-		
+
 		CreateTimer(4.0, CheckEntitysLoaded, _, TIMER_FLAG_NO_MAPCHANGE);
 	}
-	
+
 	return Plugin_Stop;
 }
 
@@ -2468,65 +2451,40 @@ public OnClientDisconnect_Post(client)
 //Credits to 1NutWunDeR
 public Action:CheckRemainingTime(Handle:timer)
 {
-	new Handle:hTmp;	
+	new Handle:hTmp;
 	hTmp = FindConVar("mp_timelimit");
-	new iTimeLimit = GetConVarInt(hTmp);			
+	new iTimeLimit = GetConVarInt(hTmp);
 	if (hTmp != INVALID_HANDLE)
-		CloseHandle(hTmp);	
+		CloseHandle(hTmp);
 	if (iTimeLimit > 0)
 	{
 		new timeleft;
 		GetMapTimeLeft(timeleft);
-		
+
 		new tier;
 		if(g_timerMapTier)
 			tier = Timer_GetTier(TRACK_NORMAL);
-		
+
 		decl String:sTier[32];
-		Format(sTier, sizeof(sTier), " Map Tier: %d", tier);
-		
-		if(GetEngineVersion() == Engine_CSGO)
+		Format(sTier, sizeof(sTier), " Tier: %d", tier);
+
+		switch(timeleft)
 		{
-			switch(timeleft)
-			{
-				case 1800: CPrintToChatAll("Current Map: %s%s Time Remaining: 30 minutes", g_currentMap, sTier);
-				case 1200: CPrintToChatAll("Current Map: %s%s Time Remaining: 20 minutes", g_currentMap, sTier);
-				case 600: CPrintToChatAll("Current Map: %s%s Time Remaining: 10 minutes", g_currentMap, sTier);
-				case 300: CPrintToChatAll("Current Map: %s%s Time Remaining: 5 minutes", g_currentMap, sTier);
-				case 120: CPrintToChatAll("Current Map: %s%s Time Remaining: 2 minutes", g_currentMap, sTier);
-				case 60: CPrintToChatAll("Current Map: %s%s Time Remaining: 60 seconds", g_currentMap, sTier);
-				case 30: CPrintToChatAll("Current Map: %s%s Time Remaining: 30 seconds", g_currentMap, sTier);
-				case 15: CPrintToChatAll("Current Map: %s%s Time Remaining: 15 seconds", g_currentMap, sTier);
-				case -1: CPrintToChatAll("3..");
-				case -2: CPrintToChatAll("2..");
-				case -3:
-				{
-					CPrintToChatAll("1..");
-					CreateTimer(1.0, TerminateRoundTimer, INVALID_HANDLE, TIMER_FLAG_NO_MAPCHANGE);				
-				}
-			}
+			case 1800: CPrintToChatAll("Current Map: %s%s Time Remaining: 30 minutes", g_currentMap, sTier);
+			case 1200: CPrintToChatAll("Current Map: %s%s Time Remaining: 20 minutes", g_currentMap, sTier);
+			case 600: CPrintToChatAll("Current Map: %s%s Time Remaining: 10 minutes", g_currentMap, sTier);
+			case 300: CPrintToChatAll("Current Map: %s%s Time Remaining: 5 minutes", g_currentMap, sTier);
+			case 120: CPrintToChatAll("Current Map: %s%s Time Remaining: 2 minutes", g_currentMap, sTier);
+			case 60: CPrintToChatAll("Current Map: %s%s Time Remaining: 60 seconds", g_currentMap, sTier);
+			case 30: CPrintToChatAll("Current Map: %s%s Time Remaining: 30 seconds", g_currentMap, sTier);
+			case 15: CPrintToChatAll("Current Map: %s%s Time Remaining: 15 seconds", g_currentMap, sTier);
+			case -1: CPrintToChatAll("3..");
+			case -2: CPrintToChatAll("2..");
+			case -3: CPrintToChatAll("1..");
 		}
-		else
-		{
-			switch(timeleft)
-			{
-				case 1800: CPrintToChatAll("Current Map: %s%s Time Remaining: 30 minutes", g_currentMap, sTier);
-				case 1200: CPrintToChatAll("Current Map: %s%s Time Remaining: 20 minutes", g_currentMap, sTier);
-				case 600: CPrintToChatAll("Current Map: %s%s Time Remaining: 10 minutes", g_currentMap, sTier);
-				case 300: CPrintToChatAll("Current Map: %s%s Time Remaining: 5 minutes", g_currentMap, sTier);
-				case 120: CPrintToChatAll("Current Map: %s%s Time Remaining: 2 minutes", g_currentMap, sTier);
-				case 60: CPrintToChatAll("Current Map: %s%s Time Remaining: 60 seconds", g_currentMap, sTier);
-				case 30: CPrintToChatAll("Current Map: %s%s Time Remaining: 30 seconds", g_currentMap, sTier);
-				case 15: CPrintToChatAll("Current Map: %s%s Time Remaining: 15 seconds", g_currentMap, sTier);
-				case -1: CPrintToChatAll("3..");
-				case -2: CPrintToChatAll("2..");
-				case -3:
-				{
-					CPrintToChatAll("1..");
-					CreateTimer(1.0, TerminateRoundTimer, INVALID_HANDLE, TIMER_FLAG_NO_MAPCHANGE);				
-				}
-			}
-		}
+
+		if(timeleft < -3 && !g_bAllowRoundEnd)
+			CreateTimer(0.0, TerminateRoundTimer, INVALID_HANDLE, TIMER_FLAG_NO_MAPCHANGE);
 	}
 }
 
@@ -2550,11 +2508,11 @@ public Action:CS_OnTerminateRound(&Float:delay, &CSRoundEndReason:reason)
 		g_bAllowRoundEnd = false;
 		return Plugin_Continue;
 	}
-	
+
 	// Block round end
 	if(g_Settings[TerminateRoundEnd])
 		return Plugin_Handled;
-	
+
 	// Let the round end
 	return Plugin_Continue;
 }
@@ -2563,10 +2521,10 @@ public Action:Event_RoundStart(Handle:event,const String:name[],bool:dontBroadca
 {
 	if (g_hSQL == INVALID_HANDLE)
 		ConnectSQL();
-	
+
 	if (g_hSQL != INVALID_HANDLE)
 		LoadMapZones();
-	
+
 	else CreateTimer(3.0, Timer_LoadMapzones, _ , TIMER_FLAG_NO_MAPCHANGE);
 }
 
@@ -2574,44 +2532,44 @@ public Action:Timer_LoadMapzones(Handle:timer, any:data)
 {
 	if (g_hSQL == INVALID_HANDLE)
 		ConnectSQL();
-	
+
 	if (g_hSQL != INVALID_HANDLE)
 		LoadMapZones();
-	
+
 	else CreateTimer(3.0, Timer_LoadMapzones, _ , TIMER_FLAG_NO_MAPCHANGE);
-	
+
 	return Plugin_Stop;
 }
 
 public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new client = GetClientOfUserId(GetEventInt(event, "userid"));
-	
+
 	g_iClientLastTrackZone[client] = 0;
 	g_iIgnoreEndTouchStart[client] = 0;
 	g_iTargetNPC[client] = 0;
 	Timer_Resume(client);
 	Timer_Stop(client, false);
-	
+
 	for (new i = 0; i <= 127; i++)
 	{
 		g_bZone[i][client] = false;
 	}
-	
+
 	if(g_Settings[TeleportOnSpawn])
 	{
 		// Prevent infinite loop
 		if(GetGameTime()-g_fSpawnTime[client] > 0.5)
 			Tele_Level(client, LEVEL_START);
 	}
-	
+
 	if(IsClientInGame(client) && IsPlayerAlive(client))
 	{
 		if(g_Settings[NoblockEnable])
 			SetNoBlock(client);
 		else SetBlock(client);
 	}
-	
+
 	g_fSpawnTime[client] = GetGameTime();
 }
 
@@ -2690,11 +2648,11 @@ bool:AddMapZone(String:map[], MapZoneType:type, String:name[], level_id, Float:p
 {
 	if (g_hSQL == INVALID_HANDLE)
 		ConnectSQL();
-	
+
 	if (g_hSQL != INVALID_HANDLE)
 	{
 		decl String:query[512];
-		
+
 		if ((type == ZtStart && !g_Settings[AllowMultipleStart])
 		|| (type == ZtEnd && !g_Settings[AllowMultipleEnd])
 		|| (type == ZtBonusStart && !g_Settings[AllowMultipleBonusStart])
@@ -2702,18 +2660,18 @@ bool:AddMapZone(String:map[], MapZoneType:type, String:name[], level_id, Float:p
 		{
 			decl String:deleteQuery[256];
 			FormatEx(deleteQuery, sizeof(deleteQuery), "DELETE FROM mapzone WHERE map = '%s' AND type = %d;", map, type);
-			
-			SQL_TQuery(g_hSQL, MapZoneChangedCallback, deleteQuery, _, DBPrio_High);	
+
+			SQL_TQuery(g_hSQL, MapZoneChangedCallback, deleteQuery, _, DBPrio_High);
 		}
-		
+
 		//add new zone
 		FormatEx(query, sizeof(query), "INSERT INTO mapzone (map, type, name, level_id, point1_x, point1_y, point1_z, point2_x, point2_y, point2_z) VALUES ('%s','%d','%s','%d', %f, %f, %f, %f, %f, %f);", map, type, name, level_id, point1[0], point1[1], point1[2], point2[0], point2[1], point2[2]);
-		
+
 		SQL_TQuery(g_hSQL, MapZoneChangedCallback, query, StrEqual(map, g_currentMap), DBPrio_Normal);
-		
+
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -2724,7 +2682,7 @@ public MapZoneChangedCallback(Handle:owner, Handle:hndl, const String:error[], a
 		Timer_LogError("SQL Error on AddMapZone: %s", error);
 		return;
 	}
-	
+
 	if(data)
 	{
 		if(g_timerMapTier)
@@ -2747,10 +2705,10 @@ bool:LoadMapZones()
 		decl String:query[512];
 		FormatEx(query, sizeof(query), "SELECT * FROM mapzone WHERE map = '%s' ORDER BY level_id ASC;", g_currentMap);
 		SQL_TQuery(g_hSQL, LoadMapZonesCallback, query, _, DBPrio_High);
-		
+
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -2758,44 +2716,51 @@ bool:LoadMapZones()
 public LoadMapZonesCallback(Handle:owner, Handle:hndl, const String:error[], any:data)
 {
 	g_bZonesLoaded = false;
-	
+
 	if (hndl == INVALID_HANDLE)
 	{
 		Timer_LogError("SQL Error on LoadMapZones: %s", error);
 		return;
 	}
-	
+
 	g_mapZonesCount = 0;
 	DeleteAllZoneEntitys();
-	
+
 	while (SQL_FetchRow(hndl))
 	{
 		strcopy(g_mapZones[g_mapZonesCount][Map], 64, g_currentMap);
-		
+
 		g_mapZones[g_mapZonesCount][Id] = SQL_FetchInt(hndl, 0);
 		g_mapZones[g_mapZonesCount][Type] = MapZoneType:SQL_FetchInt(hndl, 1);
 		g_mapZones[g_mapZonesCount][Level_Id] = SQL_FetchInt(hndl, 2);
-		
+
 		g_mapZones[g_mapZonesCount][Point1][0] = SQL_FetchFloat(hndl, 3);
 		g_mapZones[g_mapZonesCount][Point1][1] = SQL_FetchFloat(hndl, 4);
 		g_mapZones[g_mapZonesCount][Point1][2] = SQL_FetchFloat(hndl, 5);
-		
+
 		g_mapZones[g_mapZonesCount][Point2][0] = SQL_FetchFloat(hndl, 6);
 		g_mapZones[g_mapZonesCount][Point2][1] = SQL_FetchFloat(hndl, 7);
 		g_mapZones[g_mapZonesCount][Point2][2] = SQL_FetchFloat(hndl, 8);
-		
+
+		if(g_mapZones[g_mapZonesCount][Point2][2] < g_mapZones[g_mapZonesCount][Point1][2])
+		{
+			new Float:buffer = g_mapZones[g_mapZonesCount][Point2][2];
+			g_mapZones[g_mapZonesCount][Point2][2] = g_mapZones[g_mapZonesCount][Point1][2];
+			g_mapZones[g_mapZonesCount][Point1][2] = buffer;
+		}
+
 		decl String:ZoneName[32];
 		SQL_FetchString(hndl, 10, ZoneName, sizeof(ZoneName));
 		FormatEx(g_mapZones[g_mapZonesCount][zName], 32, "%s", ZoneName);
-		
+
 		SpawnZoneEntitys(g_mapZonesCount);
-		
+
 		g_mapZonesCount++;
 	}
-	
+
 	g_bZonesLoaded = true;
 	g_bSpawnSpotlights = false;
-	
+
 	/* Forwards */
 	Call_StartForward(g_OnMapZonesLoaded);
 	Call_Finish();
@@ -2817,7 +2782,7 @@ public OnTimerSqlStop()
 ConnectSQL()
 {
 	g_hSQL = Handle:Timer_SqlGetConnection();
-	
+
 	if (g_hSQL == INVALID_HANDLE)
 		CreateTimer(0.1, Timer_SQLReconnect, _ , TIMER_FLAG_NO_MAPCHANGE);
 	else
@@ -2836,38 +2801,38 @@ public OnAdminMenuReady(Handle:topmenu)
 	if (topmenu == hTopMenu) {
 		return;
 	}
-	
+
 	// Save the Handle
 	hTopMenu = topmenu;
-	
+
 	if ((oMapZoneMenu = FindTopMenuCategory(topmenu, "Timer Zones")) == INVALID_TOPMENUOBJECT)
 	{
 		oMapZoneMenu = AddToTopMenu(hTopMenu,"Timer Zones",TopMenuObject_Category,AdminMenu_CategoryHandler,INVALID_TOPMENUOBJECT);
 	}
-	
+
 	AddToTopMenu(hTopMenu, "timer_mapzones_add",TopMenuObject_Item,AdminMenu_AddMapZone,
-	oMapZoneMenu,"timer_mapzones_add",ADMFLAG_RCON);
-	
+	oMapZoneMenu,"timer_mapzones_add",ADMFLAG_BAN);
+
 	AddToTopMenu(hTopMenu, "timer_mapzones_remove",TopMenuObject_Item,AdminMenu_RemoveMapZone,
-	oMapZoneMenu,"timer_mapzones_remove",ADMFLAG_RCON);
-	
+	oMapZoneMenu,"timer_mapzones_remove",ADMFLAG_BAN);
+
 	AddToTopMenu(hTopMenu, "timer_mapzones_remove_all",TopMenuObject_Item,AdminMenu_RemoveAllMapZones,
-	oMapZoneMenu,"timer_mapzones_remove_all",ADMFLAG_RCON);
-	
+	oMapZoneMenu,"timer_mapzones_remove_all",ADMFLAG_BAN);
+
 	AddToTopMenu(hTopMenu, "sm_npc_next",TopMenuObject_Item,AdminMenu_NPC,
-	oMapZoneMenu,"sm_npc_next",ADMFLAG_RCON);
-	
+	oMapZoneMenu,"sm_npc_next",ADMFLAG_BAN);
+
 	AddToTopMenu(hTopMenu, "sm_zoneadminmode",TopMenuObject_Item,AdminMenu_AdminMode,
-	oMapZoneMenu,"sm_zoneadminmode",ADMFLAG_CHANGEMAP);
-	
+	oMapZoneMenu,"sm_zoneadminmode",ADMFLAG_BAN);
+
 	AddToTopMenu(hTopMenu, "sm_zonereload",TopMenuObject_Item,AdminMenu_Reload,
-	oMapZoneMenu,"sm_zonereload",ADMFLAG_CHANGEMAP);
-	
+	oMapZoneMenu,"sm_zonereload",ADMFLAG_BAN);
+
 	AddToTopMenu(hTopMenu, "sm_zone",TopMenuObject_Item,AdminMenu_Teleport,
-	oMapZoneMenu,"sm_zone",ADMFLAG_CHANGEMAP);
+	oMapZoneMenu,"sm_zone",ADMFLAG_BAN);
 }
 
-public AdminMenu_CategoryHandler(Handle:topmenu, 
+public AdminMenu_CategoryHandler(Handle:topmenu,
 			TopMenuAction:action,
 			TopMenuObject:object_id,
 			param,
@@ -2881,7 +2846,7 @@ public AdminMenu_CategoryHandler(Handle:topmenu,
 	}
 }
 
-public AdminMenu_AddMapZone(Handle:topmenu, 
+public AdminMenu_AddMapZone(Handle:topmenu,
 			TopMenuAction:action,
 			TopMenuObject:object_id,
 			param,
@@ -2901,7 +2866,7 @@ StartAddingZone(client)
 	DisplaySelectPointMenu(client, 1);
 }
 
-public AdminMenu_RemoveMapZone(Handle:topmenu, 
+public AdminMenu_RemoveMapZone(Handle:topmenu,
 			TopMenuAction:action,
 			TopMenuObject:object_id,
 			param,
@@ -2915,7 +2880,7 @@ public AdminMenu_RemoveMapZone(Handle:topmenu,
 	}
 }
 
-public AdminMenu_RemoveAllMapZones(Handle:topmenu, 
+public AdminMenu_RemoveAllMapZones(Handle:topmenu,
 			TopMenuAction:action,
 			TopMenuObject:object_id,
 			param,
@@ -2924,7 +2889,7 @@ public AdminMenu_RemoveAllMapZones(Handle:topmenu,
 {
 	if (action == TopMenuAction_DisplayOption) {
 		FormatEx(buffer, maxlength, "Delete All Zones");
-	} else if (action == TopMenuAction_SelectOption) 
+	} else if (action == TopMenuAction_SelectOption)
 	{
 		if(param == 0)
 			DeleteAllMapZones(param);
@@ -2932,7 +2897,7 @@ public AdminMenu_RemoveAllMapZones(Handle:topmenu,
 	}
 }
 
-public AdminMenu_NPC(Handle:topmenu, 
+public AdminMenu_NPC(Handle:topmenu,
 			TopMenuAction:action,
 			TopMenuObject:object_id,
 			param,
@@ -2941,13 +2906,13 @@ public AdminMenu_NPC(Handle:topmenu,
 {
 	if (action == TopMenuAction_DisplayOption) {
 		FormatEx(buffer, maxlength, "Create NPC Teleporter");
-	} else if (action == TopMenuAction_SelectOption) 
+	} else if (action == TopMenuAction_SelectOption)
 	{
 		CreateNPC(param, 0);
 	}
 }
 
-public AdminMenu_AdminMode(Handle:topmenu, 
+public AdminMenu_AdminMode(Handle:topmenu,
 			TopMenuAction:action,
 			TopMenuObject:object_id,
 			param,
@@ -2956,14 +2921,14 @@ public AdminMenu_AdminMode(Handle:topmenu,
 {
 	if (action == TopMenuAction_DisplayOption) {
 		FormatEx(buffer, maxlength, "Toggle Admin Mode");
-	} else if (action == TopMenuAction_SelectOption) 
+	} else if (action == TopMenuAction_SelectOption)
 	{
 		if(adminmode == 0)
 		{
 			CPrintToChatAll("%s Adminmode enabled!", PLUGIN_PREFIX2);
 			adminmode = 1;
 		}
-		else 
+		else
 		{
 			CPrintToChatAll("%s Adminmode disabled!", PLUGIN_PREFIX2);
 			adminmode = 0;
@@ -2971,7 +2936,7 @@ public AdminMenu_AdminMode(Handle:topmenu,
 	}
 }
 
-public AdminMenu_Reload(Handle:topmenu, 
+public AdminMenu_Reload(Handle:topmenu,
 			TopMenuAction:action,
 			TopMenuObject:object_id,
 			param,
@@ -2980,14 +2945,14 @@ public AdminMenu_Reload(Handle:topmenu,
 {
 	if (action == TopMenuAction_DisplayOption) {
 		FormatEx(buffer, maxlength, "Zone Reload");
-	} else if (action == TopMenuAction_SelectOption) 
+	} else if (action == TopMenuAction_SelectOption)
 	{
 		CPrintToChatAll("%s Zones Reloaded!", PLUGIN_PREFIX2);
 		LoadMapZones();
 	}
 }
 
-public AdminMenu_Teleport(Handle:topmenu, 
+public AdminMenu_Teleport(Handle:topmenu,
 			TopMenuAction:action,
 			TopMenuObject:object_id,
 			param,
@@ -2996,7 +2961,7 @@ public AdminMenu_Teleport(Handle:topmenu,
 {
 	if (action == TopMenuAction_DisplayOption) {
 		FormatEx(buffer, maxlength, "Zone Teleport");
-	} else if (action == TopMenuAction_SelectOption) 
+	} else if (action == TopMenuAction_SelectOption)
 	{
 		AdminZoneTeleport(param);
 	}
@@ -3007,17 +2972,17 @@ DeleteMapZonesMenu(client)
 	if (0 < client < MaxClients)
 	{
 		new Handle:menu = CreateMenu(Handle_DeleteMapZonesMenu);
-		
+
 		SetMenuTitle(menu, "Are you sure!");
-		
-		AddMenuItem(menu, "no", "Oh no");		
-		AddMenuItem(menu, "no", "Oh no");
-		AddMenuItem(menu, "no", "Oh no");
-		AddMenuItem(menu, "yes", "!!! YES DELETE ALL ZONES !!!");		
+
 		AddMenuItem(menu, "no", "Oh no");
 		AddMenuItem(menu, "no", "Oh no");
 		AddMenuItem(menu, "no", "Oh no");
-		
+		AddMenuItem(menu, "yes", "!!! YES DELETE ALL ZONES !!!");
+		AddMenuItem(menu, "no", "Oh no");
+		AddMenuItem(menu, "no", "Oh no");
+		AddMenuItem(menu, "no", "Oh no");
+
 		DisplayMenu(menu, client, MENU_TIME_FOREVER);
 	}
 }
@@ -3045,10 +3010,10 @@ ResetMapZoneEditor(client)
 	if(client)
 	{
 		g_mapZoneEditors[client][Step] = 0;
-		
+
 		for (new i = 0; i < 3; i++)
 			g_mapZoneEditors[client][Point1][i] = 0.0;
-		
+
 		for (new i = 0; i < 3; i++)
 			g_mapZoneEditors[client][Point1][i] = 0.0;
 	}
@@ -3058,15 +3023,15 @@ DeleteMapZone(client)
 {
 	new Float:vec[3];
 	GetClientAbsOrigin(client, vec);
-	
+
 	for (new zone = 0; zone < g_mapZonesCount; zone++)
 	{
 		if (IsInsideBox(vec, g_mapZones[zone][Point1][0], g_mapZones[zone][Point1][1], g_mapZones[zone][Point1][2], g_mapZones[zone][Point2][0], g_mapZones[zone][Point2][1], g_mapZones[zone][Point2][2]))
 		{
 			decl String:query[64];
 			FormatEx(query, sizeof(query), "DELETE FROM mapzone WHERE id = %d", g_mapZones[zone][Id]);
-			
-			SQL_TQuery(g_hSQL, DeleteMapZoneCallback, query, client, DBPrio_Normal);	
+
+			SQL_TQuery(g_hSQL, DeleteMapZoneCallback, query, client, DBPrio_Normal);
 			break;
 		}
 	}
@@ -3076,7 +3041,7 @@ DeleteAllMapZones(client)
 {
 	decl String:query[256];
 	FormatEx(query, sizeof(query), "DELETE FROM mapzone WHERE map = '%s'", g_currentMap);
-	
+
 	SQL_TQuery(g_hSQL, DeleteMapZoneCallback, query, client, DBPrio_Normal);
 }
 
@@ -3087,9 +3052,9 @@ public DeleteMapZoneCallback(Handle:owner, Handle:hndl, const String:error[], an
 		Timer_LogError("SQL Error on DeleteMapZone: %s", error);
 		return;
 	}
-	
+
 	LoadMapZones();
-	
+
 	if (IsClientInGame(data))
 		CPrintToChat(data, PLUGIN_PREFIX, "Map Zone Delete");
 }
@@ -3097,19 +3062,19 @@ public DeleteMapZoneCallback(Handle:owner, Handle:hndl, const String:error[], an
 DisplaySelectPointMenu(client, n)
 {
 	new Handle:panel = CreatePanel();
-	
+
 	decl String:message[255];
 	decl String:first[32], String:second[32];
 	FormatEx(first, sizeof(first), "%t", "FIRST");
 	FormatEx(second, sizeof(second), "%t", "SECOND");
-	
+
 	FormatEx(message, sizeof(message), "%t", "Point Select Panel", (n == 1) ? first : second);
-	
+
 	DrawPanelItem(panel, message, ITEMDRAW_RAWLINE);
-	
+
 	FormatEx(message, sizeof(message), "%t", "Cancel");
 	DrawPanelItem(panel, message);
-	
+
 	SendPanelToClient(panel, client, PointSelect, 540);
 	CloseHandle(panel);
 }
@@ -3117,28 +3082,28 @@ DisplaySelectPointMenu(client, n)
 DisplayPleaseWaitMenu(client)
 {
 	new Handle:panel = CreatePanel();
-	
+
 	decl String:wait[64];
 	FormatEx(wait, sizeof(wait), "%t", "Please wait");
 	DrawPanelItem(panel, wait, ITEMDRAW_RAWLINE);
-	
+
 	SendPanelToClient(panel, client, PointSelect, 540);
 	CloseHandle(panel);
 }
 
 public PointSelect(Handle:menu, MenuAction:action, param1, param2)
 {
-	if (action == MenuAction_End) 
+	if (action == MenuAction_End)
 	{
 		CloseHandle(menu);
-	} 
-	else if (action == MenuAction_Select) 
+	}
+	else if (action == MenuAction_Select)
 	{
-		if (param2 == MenuCancel_Exit && hTopMenu != INVALID_HANDLE) 
+		if (param2 == MenuCancel_Exit && hTopMenu != INVALID_HANDLE)
 		{
 			DisplayTopMenu(hTopMenu, param1, TopMenuPosition_LastCategory);
 		}
-		
+
 		ResetMapZoneEditor(param1);
 	}
 }
@@ -3146,10 +3111,10 @@ public PointSelect(Handle:menu, MenuAction:action, param1, param2)
 public Action:ChangeStep(Handle:timer, any:serial)
 {
 	new client = GetClientFromSerial(serial);
-	
+
 	g_mapZoneEditors[client][Step] = 2;
 	CreateTimer(0.1, DrawAdminBox, GetClientSerial(client), TIMER_REPEAT);
-	
+
 	DisplaySelectPointMenu(client, 2);
 }
 
@@ -3164,7 +3129,7 @@ stock CheckIllegalTeleport(client)
 	{
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -3174,26 +3139,26 @@ stock CreateNPC(client, step, bool:double = false)
 	{
 		if(!IsClientInGame(client))
 			return;
-		
+
 		if(step == 0)
 		{
 			new Float:vec[3];
 			GetClientAbsOrigin(client, vec);
 			g_mapZoneEditors[client][Point1] = vec;
 			new Handle:menu = CreateMenu(Handle_Menu_NPC);
-			
+
 			SetMenuTitle(menu, "Timer Menu");
-			
+
 			AddMenuItem(menu, "npc_reset", "Reset NPC Point");
 			AddMenuItem(menu, "dest", "Set Destination (Teammate)");
 			AddMenuItem(menu, "dest_double", "Set Destination (Both Players)");
-			
+
 			DisplayMenu(menu, client, MENU_TIME_FOREVER);
 		}
 		else
 		{
 			new String:lvlbuffer[32];
-			
+
 			new hcount = LEVEL_START;
 			for (new zone = 0; zone < g_mapZonesCount; zone++)
 			{
@@ -3201,21 +3166,21 @@ stock CreateNPC(client, step, bool:double = false)
 				if(g_mapZones[zone][Level_Id] <= hcount) continue;
 				hcount = g_mapZones[zone][Level_Id];
 			}
-			
+
 			hcount++;
-			
+
 			FormatEx(lvlbuffer, sizeof(lvlbuffer), "Level %d", hcount);
-			
+
 			new Float:vec[3];
 			GetClientAbsOrigin(client, vec);
 			g_mapZoneEditors[client][Point2] = vec;
-			
+
 			new Float:point1[3];
 			Array_Copy(g_mapZoneEditors[client][Point1], point1, 3);
-			
+
 			new Float:point2[3];
 			Array_Copy(g_mapZoneEditors[client][Point2], point2, 3);
-			
+
 			if(!double)
 			{
 				if(!AddMapZone(g_currentMap, MapZoneType:ZtNPC_Next, lvlbuffer, hcount, point1, point2))
@@ -3257,23 +3222,23 @@ public Handle_Menu_NPC(Handle:menu, MenuAction:action, client, itemNum)
 public Action:DrawAdminBox(Handle:timer, any:serial)
 {
 	new client = GetClientFromSerial(serial);
-	
+
 	if (g_mapZoneEditors[client][Step] == 0)
 	{
 		return Plugin_Stop;
 	}
-	
+
 	new Float:a[3], Float:b[3];
-	
+
 	Array_Copy(g_mapZoneEditors[client][Point1], b, 3);
-	
+
 	if (g_mapZoneEditors[client][Step] == 3)
 		Array_Copy(g_mapZoneEditors[client][Point2], a, 3);
 	else
 	GetClientAbsOrigin(client, a);
-	
+
 	new color[4] = {255, 255, 255, 255};
-	
+
 	DrawBox(a, b, 0.1, color, false);
 	return Plugin_Continue;
 }
@@ -3284,15 +3249,15 @@ public Action:DrawZones(Handle:timer)
 	{
 		new Float:point1[3];
 		Array_Copy(g_mapZones[zone][Point1], point1, 3);
-		
+
 		new Float:point2[3];
 		Array_Copy(g_mapZones[zone][Point2], point2, 3);
-		
+
 		if (point1[2] < point2[2])
 			point2[2] = point1[2];
 		else
 			point1[2] = point2[2];
-		
+
 		if (g_mapZones[zone][Type] == ZtStart)
 			DrawBox(point1, point2, 1.0, g_startColor, true, precache_laser_start);
 		else if (g_mapZones[zone][Type] == ZtEnd)
@@ -3302,7 +3267,7 @@ public Action:DrawZones(Handle:timer)
 		else if (g_mapZones[zone][Type] == ZtBonusEnd || g_mapZones[zone][Type] == ZtBonus2End || g_mapZones[zone][Type] == ZtBonus3End || g_mapZones[zone][Type] == ZtBonus4End || g_mapZones[zone][Type] == ZtBonus5End)
 			DrawBox(point1, point2, 1.0, g_bonusendColor, true, precache_laser_bonus_end);
 	}
-	
+
 	return Plugin_Continue;
 }
 
@@ -3312,10 +3277,10 @@ DrawZone(zone, bool:flat)
 	{
 		new Float:point1[3];
 		Array_Copy(g_mapZones[zone][Point1], point1, 3);
-		
+
 		new Float:point2[3];
 		Array_Copy(g_mapZones[zone][Point2], point2, 3);
-		
+
 		if(flat)
 		{
 			if (point1[2] < point2[2])
@@ -3323,7 +3288,7 @@ DrawZone(zone, bool:flat)
 			else
 			point1[2] = point2[2];
 		}
-		
+
 		if(flat)
 		{
 			if (g_mapZones[zone][Type] == ZtStop)
@@ -3347,7 +3312,7 @@ DrawZone(zone, bool:flat)
 		{
 			DrawBox(point1, point2, 1.0, g_startColor, flat);
 		}
-		
+
 		g_MapZoneDrawDelayTimer[zone] = CreateTimer(2.0, Timer_DelayDraw, zone, TIMER_FLAG_NO_MAPCHANGE);
 	}
 }
@@ -3355,7 +3320,7 @@ DrawZone(zone, bool:flat)
 public Action:Timer_DelayDraw(Handle:timer, any:zone)
 {
 	g_MapZoneDrawDelayTimer[zone] = INVALID_HANDLE;
-	
+
 	return Plugin_Stop;
 }
 
@@ -3363,13 +3328,13 @@ public TraceToEntity(client)
 {
 	new Float:vecClientEyePos[3], Float:vecClientEyeAng[3];
 	GetClientEyePosition(client, vecClientEyePos);
-	GetClientEyeAngles(client, vecClientEyeAng);    
-	
+	GetClientEyeAngles(client, vecClientEyeAng);
+
 	TR_TraceRayFilter(vecClientEyePos, vecClientEyeAng, MASK_PLAYERSOLID, RayType_Infinite, TraceASDF, client);
-	
+
 	if (TR_DidHit(INVALID_HANDLE))
 		return (TR_GetEntityIndex(INVALID_HANDLE));
-	
+
 	return (-1);
 }
 
@@ -3383,6 +3348,14 @@ bool:IsPlayerTouchingSpeedZone(client)
 	if(g_bPreSpeedStart && Timer_IsPlayerTouchingZoneType(client, ZtStart))
 		return true;
 	if(g_bPreSpeedBonusStart && Timer_IsPlayerTouchingZoneType(client, ZtBonusStart))
+		return true;
+	if(g_bPreSpeedBonusStart && Timer_IsPlayerTouchingZoneType(client, ZtBonus2Start))
+		return true;
+	if(g_bPreSpeedBonusStart && Timer_IsPlayerTouchingZoneType(client, ZtBonus3Start))
+		return true;
+	if(g_bPreSpeedBonusStart && Timer_IsPlayerTouchingZoneType(client, ZtBonus4Start))
+		return true;
+	if(g_bPreSpeedBonusStart && Timer_IsPlayerTouchingZoneType(client, ZtBonus5Start))
 		return true;
 	if(Timer_IsPlayerTouchingZoneType(client, ZtLimitSpeed))
 		return true;
@@ -3404,7 +3377,7 @@ bool:IsPlayerTouchingSpeedZone(client)
 		return true;
 	if(Timer_IsPlayerTouchingZoneType(client, ZtHover))
 		return true;
-	
+
 	return false;
 }
 
@@ -3422,18 +3395,18 @@ ChangePlayerVelocity(client)
 		return;
 	if(g_mapZonesCount < 1)
 		return;
-	
+
 	new Float:vec[3];
 	GetClientAbsOrigin(client, vec);
-	
+
 	new style = Timer_GetStyle(client);
 	new Float:maxspeed = g_Physics[style][StyleBlockPreSpeeding];
-	
+
 	if(!IsPlayerTouchingSpeedZone(client))
 		return;
-	
+
 	new Float:push_maxspeed = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
-	
+
 	if (Timer_IsPlayerTouchingZoneType(client, ZtFullBooster))
 	{
 		CheckVelocity(client, 4, maxspeed);
@@ -3500,29 +3473,29 @@ IsInsideBox(Float:fPCords[3], Float:fbsx, Float:fbsy, Float:fbsz, Float:fbex, Fl
 	new Float:fpx = fPCords[0];
 	new Float:fpy = fPCords[1];
 	new Float:fpz = fPCords[2]+30;
-	
+
 	new bool:bX = false;
 	new bool:bY = false;
 	new bool:bZ = false;
-	
+
 	if (fbsx > fbex && fpx <= fbsx && fpx >= fbex)
 		bX = true;
 	else if (fbsx < fbex && fpx >= fbsx && fpx <= fbex)
 		bX = true;
-	
+
 	if (fbsy > fbey && fpy <= fbsy && fpy >= fbey)
 		bY = true;
 	else if (fbsy < fbey && fpy >= fbsy && fpy <= fbey)
 		bY = true;
-	
+
 	if (fbsz > fbez && fpz <= fbsz && fpz >= fbez)
 		bZ = true;
 	else if (fbsz < fbez && fpz >= fbsz && fpz <= fbez)
 		bZ = true;
-	
+
 	if (bX && bY && bZ)
 		return true;
-	
+
 	return false;
 }
 
@@ -3530,7 +3503,7 @@ DrawBox(Float:fFrom[3], Float:fTo[3], Float:fLife, color[4], bool:flat, iSpriteI
 {
 	if(iSpriteIndex == 0)
 		iSpriteIndex = precache_laser_default;
-	
+
 	if(g_Settings[ZoneSprites] || !flat)
 	{
 		//initialize tempoary variables bottom front
@@ -3541,7 +3514,7 @@ DrawBox(Float:fFrom[3], Float:fTo[3], Float:fLife, color[4], bool:flat, iSpriteI
 			fLeftBottomFront[2] = fTo[2]-g_Settings[ZoneBeamHeight];
 		else
 			fLeftBottomFront[2] = fTo[2];
-		
+
 		decl Float:fRightBottomFront[3];
 		fRightBottomFront[0] = fTo[0];
 		fRightBottomFront[1] = fFrom[1];
@@ -3549,7 +3522,7 @@ DrawBox(Float:fFrom[3], Float:fTo[3], Float:fLife, color[4], bool:flat, iSpriteI
 			fRightBottomFront[2] = fTo[2]-g_Settings[ZoneBeamHeight];
 		else
 			fRightBottomFront[2] = fTo[2];
-		
+
 		//initialize tempoary variables bottom back
 		decl Float:fLeftBottomBack[3];
 		fLeftBottomBack[0] = fFrom[0];
@@ -3558,7 +3531,7 @@ DrawBox(Float:fFrom[3], Float:fTo[3], Float:fLife, color[4], bool:flat, iSpriteI
 			fLeftBottomBack[2] = fTo[2]-g_Settings[ZoneBeamHeight];
 		else
 			fLeftBottomBack[2] = fTo[2];
-		
+
 		decl Float:fRightBottomBack[3];
 		fRightBottomBack[0] = fTo[0];
 		fRightBottomBack[1] = fTo[1];
@@ -3566,7 +3539,7 @@ DrawBox(Float:fFrom[3], Float:fTo[3], Float:fLife, color[4], bool:flat, iSpriteI
 			fRightBottomBack[2] = fTo[2]-g_Settings[ZoneBeamHeight];
 		else
 			fRightBottomBack[2] = fTo[2];
-		
+
 		//initialize tempoary variables top front
 		decl Float:fLeftTopFront[3];
 		fLeftTopFront[0] = fFrom[0];
@@ -3582,7 +3555,7 @@ DrawBox(Float:fFrom[3], Float:fTo[3], Float:fLife, color[4], bool:flat, iSpriteI
 			fRightTopFront[2] = fFrom[2]+g_Settings[ZoneBeamHeight];
 		else
 			fRightTopFront[2] = fFrom[2];
-		
+
 		//initialize tempoary variables top back
 		decl Float:fLeftTopBack[3];
 		fLeftTopBack[0] = fFrom[0];
@@ -3598,29 +3571,29 @@ DrawBox(Float:fFrom[3], Float:fTo[3], Float:fLife, color[4], bool:flat, iSpriteI
 			fRightTopBack[2] = fFrom[2]+g_Settings[ZoneBeamHeight];
 		else
 		fRightTopBack[2] = fFrom[2];
-		
+
 		new Float:width = g_Settings[ZoneBeamThickness];
-		
+
 		if(flat == false)
 			width = 0.5;
-		
+
 		//create the box
 		TE_SetupBeamPoints(fLeftTopFront,fRightTopFront,iSpriteIndex,0,0,0,0.99,width,width,10,0.0,color,10);TE_SendToAll(0.0);
 		TE_SetupBeamPoints(fLeftTopBack,fLeftTopFront,iSpriteIndex,0,0,0,0.99,width,width,10,0.0,color,10);TE_SendToAll(0.0);
 		TE_SetupBeamPoints(fRightTopBack,fLeftTopBack,iSpriteIndex,0,0,0,0.99,width,width,10,0.0,color,10);TE_SendToAll(0.0);
 		TE_SetupBeamPoints(fRightTopFront,fRightTopBack,iSpriteIndex,0,0,0,0.99,width,width,10,0.0,color,10);TE_SendToAll(0.0);
-		
+
 		if(!flat)
 		{
 			TE_SetupBeamPoints(fRightBottomFront,fLeftBottomFront,iSpriteIndex,0,0,0,fLife,width,width,0,0.0,color,0);TE_SendToAll(0.0);
 			TE_SetupBeamPoints(fLeftBottomBack,fLeftBottomFront,iSpriteIndex,0,0,0,fLife,width,width,0,0.0,color,0);TE_SendToAll(0.0);
 			TE_SetupBeamPoints(fLeftTopFront,fLeftBottomFront,iSpriteIndex,0,0,0,fLife,width,width,0,0.0,color,0);TE_SendToAll(0.0);
-			
-			
+
+
 			TE_SetupBeamPoints(fLeftBottomBack,fRightBottomBack,iSpriteIndex,0,0,0,fLife,width,width,0,0.0,color,0);TE_SendToAll(0.0);
 			TE_SetupBeamPoints(fRightBottomFront,fRightBottomBack,iSpriteIndex,0,0,0,fLife,width,width,0,0.0,color,0);TE_SendToAll(0.0);
 			TE_SetupBeamPoints(fRightTopBack,fRightBottomBack,iSpriteIndex,0,0,0,fLife,width,width,0,0.0,color,0);TE_SendToAll(0.0);
-			
+
 			TE_SetupBeamPoints(fRightTopFront,fRightBottomFront,iSpriteIndex,0,0,0,fLife,width,width,0,0.0,color,0);TE_SendToAll(0.0);
 			TE_SetupBeamPoints(fLeftTopBack,fLeftBottomBack,iSpriteIndex,0,0,0,fLife,width,width,0,0.0,color,0);TE_SendToAll(0.0);
 		}
@@ -3851,28 +3824,28 @@ stock ZoneEffectTesla(targetzone)
 
 	TeleportEntity(laserent, center, zero, zero);
 
-	AcceptEntityInput(laserent, "TurnOn");  
+	AcceptEntityInput(laserent, "TurnOn");
 	AcceptEntityInput(laserent, "DoSpark");
 }
 
 GetZoneEntityCount()
 {
 	new count;
-	
+
 	for (new i = MaxClients; i <= 2047; i++)
 	{
 		if(!IsValidEntity(i)) continue;
-		
+
 		new String:EntName[256];
 		Entity_GetName(i, EntName, sizeof(EntName));
-		
+
 		new valid = StrContains(EntName, "#TIMER_");
 		if(valid > -1)
 		{
 			count++;
 		}
 	}
-	
+
 	return count;
 }
 
@@ -3882,25 +3855,25 @@ DeleteAllZoneEntitys()
 	{
 		g_MapZoneDrawDelayTimer[i] = INVALID_HANDLE;
 		g_MapZoneEntityZID[i] = -1;
-		
+
 		if(!IsValidEntity(i)) continue;
-		
+
 		new String:EntName[256];
 		Entity_GetName(i, EntName, sizeof(EntName));
-		
+
 		if(StrContains(EntName, "#TIMER_NPC") != -1)
 			SDKUnhook(i, SDKHook_StartTouch, NPC_Use);
-		
+
 		if(StrContains(EntName, "#TIMER_TRIGGER") != -1)
 		{
 			SDKUnhook(i, SDKHook_StartTouch, StartTouchTrigger);
 			SDKUnhook(i, SDKHook_EndTouch, EndTouchTrigger);
 			SDKUnhook(i, SDKHook_Touch, OnTouchTrigger);
 		}
-		
+
 		if(StrContains(EntName, "#TIMER_") != -1)
 			DeleteEntity(i);
-		
+
 		for (new client = 1; client <= MaxClients; client++)
 			g_bZone[i][client] = false;
 	}
@@ -3918,13 +3891,13 @@ SpawnZoneEntitys(zone)
 		// No valid zone
 		return;
 	}
-	
+
 	//Spawn debug entitys ine each corner
 	if(adminmode == 1)
 	{
 		SpawnZoneDebugEntitys(zone);
 	}
-	
+
 	//Spawn NPCs
 	if(g_mapZones[zone][Type] == ZtNPC_Next || g_mapZones[zone][Type] == ZtNPC_Next_Double)
 	{
@@ -3940,27 +3913,27 @@ SpawnZoneEntitys(zone)
 	{
 		SpawnZoneTrigger(zone);
 	}
-	
+
 	//Spawn spot lights
 	if(g_bSpawnSpotlights && g_Settings[ZoneSpotlights])
 	{
-		if(g_mapZones[zone][Type] == ZtStart || 
-			g_mapZones[zone][Type] == ZtEnd || 
-			g_mapZones[zone][Type] == ZtLevel || 
-			g_mapZones[zone][Type] == ZtBonusStart || 
-			g_mapZones[zone][Type] == ZtBonus2Start || 
-			g_mapZones[zone][Type] == ZtBonus3Start || 
-			g_mapZones[zone][Type] == ZtBonus4Start || 
-			g_mapZones[zone][Type] == ZtBonus5Start || 
-			g_mapZones[zone][Type] == ZtBonusEnd || 
-			g_mapZones[zone][Type] == ZtBonus2End || 
-			g_mapZones[zone][Type] == ZtBonus3End || 
-			g_mapZones[zone][Type] == ZtBonus4End || 
-			g_mapZones[zone][Type] == ZtBonus5End || 
-			g_mapZones[zone][Type] == ZtBonusLevel || 
-			g_mapZones[zone][Type] == ZtBonus2Level || 
-			g_mapZones[zone][Type] == ZtBonus3Level || 
-			g_mapZones[zone][Type] == ZtBonus4Level || 
+		if(g_mapZones[zone][Type] == ZtStart ||
+			g_mapZones[zone][Type] == ZtEnd ||
+			g_mapZones[zone][Type] == ZtLevel ||
+			g_mapZones[zone][Type] == ZtBonusStart ||
+			g_mapZones[zone][Type] == ZtBonus2Start ||
+			g_mapZones[zone][Type] == ZtBonus3Start ||
+			g_mapZones[zone][Type] == ZtBonus4Start ||
+			g_mapZones[zone][Type] == ZtBonus5Start ||
+			g_mapZones[zone][Type] == ZtBonusEnd ||
+			g_mapZones[zone][Type] == ZtBonus2End ||
+			g_mapZones[zone][Type] == ZtBonus3End ||
+			g_mapZones[zone][Type] == ZtBonus4End ||
+			g_mapZones[zone][Type] == ZtBonus5End ||
+			g_mapZones[zone][Type] == ZtBonusLevel ||
+			g_mapZones[zone][Type] == ZtBonus2Level ||
+			g_mapZones[zone][Type] == ZtBonus3Level ||
+			g_mapZones[zone][Type] == ZtBonus4Level ||
 			g_mapZones[zone][Type] == ZtBonus5Level)
 		{
 			SpawnZoneSpotLights(zone);
@@ -3975,19 +3948,19 @@ SpawnZoneTrigger(zone)
 	center[0] = (g_mapZones[zone][Point1][0] + g_mapZones[zone][Point2][0]) / 2.0;
 	center[1] = (g_mapZones[zone][Point1][1] + g_mapZones[zone][Point2][1]) / 2.0;
 	center[2] = g_mapZones[zone][Point1][2];
-	
+
 	// Min & max bounds
-	new Float:minbounds[3]; 
-	new Float:maxbounds[3]; 
-	
+	new Float:minbounds[3];
+	new Float:maxbounds[3];
+
 	minbounds[0] = FloatAbs(g_mapZones[zone][Point1][0]-g_mapZones[zone][Point2][0]) / -2.0;
 	minbounds[1] = FloatAbs(g_mapZones[zone][Point1][1]-g_mapZones[zone][Point2][1]) / -2.0;
 	minbounds[2] = -1.0; // Just to be save it's not buggy like a defective contact
-	
+
 	maxbounds[0] = FloatAbs(g_mapZones[zone][Point1][0]-g_mapZones[zone][Point2][0]) / 2.0;
 	maxbounds[1] = FloatAbs(g_mapZones[zone][Point1][1]-g_mapZones[zone][Point2][1]) / 2.0;
 	maxbounds[2] = FloatAbs(g_mapZones[zone][Point1][2]-g_mapZones[zone][Point2][2]);
-	
+
 	// Resize trigger (by default it's set to 16.0).  A player is 32.0 unity wide, so we need to resize the trigger to have a touching border between the legs
 	minbounds[0] += g_Settings[ZoneResize];
 	minbounds[1] += g_Settings[ZoneResize];
@@ -3995,17 +3968,17 @@ SpawnZoneTrigger(zone)
 	maxbounds[0] -= g_Settings[ZoneResize];
 	maxbounds[1] -= g_Settings[ZoneResize];
 	maxbounds[2] -= g_Settings[ZoneResize];
-	
+
 	// Spawn trigger
 	new entity = CreateEntityByName("trigger_multiple");
 	if (entity > 0)
 	{
 		// Attach zoneID to the entity
 		g_MapZoneEntityZID[entity] = zone;
-		
+
 		// Give our trigger_multiple a model (It's totally unimportant which one you are using)
-		SetEntityModel(entity, "models/props_junk/wood_crate001a.mdl"); 
-		
+		SetEntityModel(entity, "models/props_junk/wood_crate001a.mdl");
+
 		if(IsValidEntity(entity))
 		{
 			// Spawnflags for "trigger_multiple"
@@ -4016,29 +3989,29 @@ SpawnZoneTrigger(zone)
 			// 16 - only non-player NPCs can trigger this by touch
 			// 128 - Start off, has to be activated by a target_activate to be touchable/usable
 			// 256 - multiple players can trigger the entity at the same time
-			
-			DispatchKeyValue(entity, "spawnflags", "257"); 
-			
+
+			DispatchKeyValue(entity, "spawnflags", "257");
+
 			DispatchKeyValue(entity, "StartDisabled", "0");
-			
+
 			// Give our entity a unique name tag, so we can delete it also if the plugins was reloaded without deleting them
 			new String:EntName[256];
 			FormatEx(EntName, sizeof(EntName), "#TIMER_Trigger_%d", g_mapZones[zone][Id]);
 			DispatchKeyValue(entity, "targetname", EntName);
-			
+
 			if(DispatchSpawn(entity))
 			{
 				ActivateEntity(entity);
-				
+
 				// Set the size of our trigger_multiple box
 				SetEntPropVector(entity, Prop_Send, "m_vecMins", minbounds);
 				SetEntPropVector(entity, Prop_Send, "m_vecMaxs", maxbounds);
-				
+
 				SetEntProp(entity, Prop_Send, "m_nSolidType", 2);
 				SetEntProp(entity, Prop_Send, "m_fEffects", GetEntProp(entity, Prop_Send, "m_fEffects") | 32);
-				
+
 				TeleportEntity(entity, center, NULL_VECTOR, NULL_VECTOR);
-				
+
 				SDKHook(entity, SDKHook_StartTouch,  StartTouchTrigger);
 				SDKHook(entity, SDKHook_EndTouch, EndTouchTrigger);
 				SDKHook(entity, SDKHook_Touch, OnTouchTrigger);
@@ -4053,36 +4026,36 @@ SpawnZoneSpotLights(zone)
 	fFrom[0] = g_mapZones[zone][Point2][0];
 	fFrom[1] = g_mapZones[zone][Point2][1];
 	fFrom[2] = g_mapZones[zone][Point2][2];
-	
+
 	new Float:fTo[3];
 	fTo[0] = g_mapZones[zone][Point1][0];
 	fTo[1] = g_mapZones[zone][Point1][1];
 	fTo[2] = g_mapZones[zone][Point1][2];
-	
+
 	//initialize tempoary variables bottom front
 	decl Float:fLeftBottomFront[3];
 	fLeftBottomFront[0] = fFrom[0];
 	fLeftBottomFront[1] = fFrom[1];
 	fLeftBottomFront[2] = fTo[2]+20;
-	
+
 	decl Float:fRightBottomFront[3];
 	fRightBottomFront[0] = fTo[0];
 	fRightBottomFront[1] = fFrom[1];
 	fRightBottomFront[2] = fTo[2]+20;
-	
+
 	//initialize tempoary variables bottom back
 	decl Float:fLeftBottomBack[3];
 	fLeftBottomBack[0] = fFrom[0];
 	fLeftBottomBack[1] = fTo[1];
 	fLeftBottomBack[2] = fTo[2]+20;
-	
+
 	decl Float:fRightBottomBack[3];
 	fRightBottomBack[0] = fTo[0];
 	fRightBottomBack[1] = fTo[1];
 	fRightBottomBack[2] = fTo[2]+20;
-	
+
 	new Float:ang[3], Float:color[3];
-	
+
 	if(g_mapZones[zone][Type] == ZtStart)
 	{
 		color[0] = float(g_startColor[0]);
@@ -4119,9 +4092,9 @@ SpawnZoneSpotLights(zone)
 		color[1] = float(g_bonusendColor[1]);
 		color[2] = float(g_bonusendColor[2]);
 	}
-	
+
 	ang[0] = -90.0;
-	
+
 	SpawnSpotLight(fLeftBottomFront, color, ang);
 	SpawnSpotLight(fRightBottomFront, color, ang);
 	SpawnSpotLight(fLeftBottomBack, color, ang);
@@ -4131,47 +4104,47 @@ SpawnZoneSpotLights(zone)
 stock SpawnSpotLight(Float:pos[3], Float:color[3], Float:ang[3])
 {
 	pos[2] -= 16.0;
-	
+
 	new entity = CreateEntityByName("point_spotlight");
-	
+
 	decl String:sAng[32];
 	Format(sAng, sizeof(sAng), "%d %d %d", RoundToFloor(ang[0]), RoundToFloor(ang[1]), RoundToFloor(ang[2]));
-	
-	
+
+
 	decl String:EntName[256];
 	FormatEx(EntName, sizeof(EntName), "#TIMER_SPOTLIGHT_%d_%d_%d", RoundToFloor(pos[0]), RoundToFloor(pos[1]), RoundToFloor(pos[2]));
 	DispatchKeyValue(entity, "targetname", EntName);
-	
+
 	DispatchKeyValue(entity, "SpotlightLength", "350");
 	DispatchKeyValue(entity, "SpotlightWidth", "25");
 	DispatchKeyValue(entity, "rendermode", "0");
 	DispatchKeyValue(entity, "scale", "1");
 	DispatchKeyValue(entity, "renderamt", "64");
 	DispatchKeyValueVector(entity, "rendercolor", color);
-	
+
 	DispatchKeyValue(entity, "HDRColorScale", "0.1");
 	DispatchKeyValue(entity, "HaloScale", "1");
 	DispatchKeyValue(entity, "fadescale", "1");
-	
+
 	DispatchKeyValue(entity, "brightness", "1");
-	
+
 	DispatchKeyValue(entity, "_light", "255 255 255 255");
 	DispatchKeyValue(entity, "style", "0");
-	
+
 	DispatchKeyValue(entity, "pitch", "0 0 0");
 	DispatchKeyValue(entity, "renderamt", "255");
-	
+
 	DispatchKeyValue(entity, "disablereceiveshadows", "1");
-	
+
 	//-75 x 0
 	DispatchKeyValue(entity, "angles", sAng);
-	
+
 	DispatchKeyValue(entity, "spawnflags", "3");
-	
+
 	DispatchSpawn(entity);
-	
+
 	TeleportEntity(entity, pos, NULL_VECTOR, NULL_VECTOR);
-	
+
 	AcceptEntityInput(entity, "LightOn");
 }
 
@@ -4181,12 +4154,12 @@ SpawnNPC(zone)
 	vecNPC[0] = g_mapZones[zone][Point1][0];
 	vecNPC[1] = g_mapZones[zone][Point1][1];
 	vecNPC[2] = g_mapZones[zone][Point1][2];
-	
+
 	new Float:vecDestination[3];
 	vecDestination[0] = g_mapZones[zone][Point2][0];
 	vecDestination[1] = g_mapZones[zone][Point2][1];
 	vecDestination[2] = g_mapZones[zone][Point2][2];
-	
+
 	new String:ModePath[256];
 	if(g_mapZones[zone][Type] == ZtNPC_Next)
 	{
@@ -4198,24 +4171,24 @@ SpawnNPC(zone)
 		PrecacheModel(g_Settings[NPC_Double_Path], true);
 		FormatEx(ModePath, sizeof(ModePath), "%s", g_Settings[NPC_Double_Path]);
 	}
-	
+
 	decl String:EntName[256];
 	FormatEx(EntName, sizeof(EntName), "#TIMER_NPC_%d", g_mapZones[zone][Id]);
-	
+
 	new String:Classname[] = "prop_physics_override";
-	
+
 	new entity1 = CreateEntityByName(Classname);
 	SetEntityModel(entity1, ModePath);
-	
+
 	DispatchKeyValue(entity1, "targetname", EntName);
-	
+
 	DispatchSpawn(entity1);
 	AcceptEntityInput(entity1, "DisableMotion");
 	AcceptEntityInput(entity1, "DisableShadow");
 	TeleportEntity(entity1, vecNPC, NULL_VECTOR, NULL_VECTOR);
-	
+
 	g_mapZones[zone][NPC] = entity1;
-	
+
 	SDKHook(entity1, SDKHook_StartTouch, NPC_Use);
 }
 
@@ -4225,59 +4198,59 @@ SpawnZoneDebugEntitys(zone)
 {
 	if(g_mapZones[zone][Type] == ZtNPC_Next || g_mapZones[zone][Type] == ZtNPC_Next_Double)
 		return;
-	
+
 	new Float:fFrom[3];
 	fFrom[0] = g_mapZones[zone][Point2][0];
 	fFrom[1] = g_mapZones[zone][Point2][1];
 	fFrom[2] = g_mapZones[zone][Point2][2];
-	
+
 	new Float:fTo[3];
 	fTo[0] = g_mapZones[zone][Point1][0];
 	fTo[1] = g_mapZones[zone][Point1][1];
 	fTo[2] = g_mapZones[zone][Point1][2];
-	
+
 	//initialize tempoary variables bottom front
 	decl Float:fLeftBottomFront[3];
 	fLeftBottomFront[0] = fFrom[0];
 	fLeftBottomFront[1] = fFrom[1];
 	fLeftBottomFront[2] = fTo[2]+20;
-	
+
 	decl Float:fRightBottomFront[3];
 	fRightBottomFront[0] = fTo[0];
 	fRightBottomFront[1] = fFrom[1];
 	fRightBottomFront[2] = fTo[2]+20;
-	
+
 	//initialize tempoary variables bottom back
 	decl Float:fLeftBottomBack[3];
 	fLeftBottomBack[0] = fFrom[0];
 	fLeftBottomBack[1] = fTo[1];
 	fLeftBottomBack[2] = fTo[2]+20;
-	
+
 	decl Float:fRightBottomBack[3];
 	fRightBottomBack[0] = fTo[0];
 	fRightBottomBack[1] = fTo[1];
 	fRightBottomBack[2] = fTo[2]+20;
-	
+
 	PrecacheModel("models/props_junk/trafficcone001a.mdl", true);
-	
+
 	decl String:EntName[256];
 	FormatEx(EntName, sizeof(EntName), "#TIMER_Zone_%d", g_mapZones[zone][Id]);
-	
+
 	new String:ModePath[] = "models/props_junk/trafficcone001a.mdl";
 	new String:Classname[] = "prop_physics_override";
-	
+
 	new entity1 = CreateEntityByName(Classname);
 	SetEntityModel(entity1, ModePath);
 	SetEntProp(entity1, Prop_Data, "m_CollisionGroup", 1);
 	SetEntProp(entity1, Prop_Send, "m_usSolidFlags", 12);
 	SetEntProp(entity1, Prop_Send, "m_nSolidType", 6);
-	SetEntityMoveType(entity1, MOVETYPE_NONE);		
+	SetEntityMoveType(entity1, MOVETYPE_NONE);
 	DispatchKeyValue(entity1, "targetname", EntName);
 	DispatchSpawn(entity1);
 	AcceptEntityInput(entity1, "DisableMotion");
 	AcceptEntityInput(entity1, "DisableShadow");
 	TeleportEntity(entity1, fRightBottomBack, NULL_VECTOR, NULL_VECTOR);
-	
+
 	new entity2 = CreateEntityByName(Classname);
 	SetEntityModel(entity2, ModePath);
 	SetEntProp(entity2, Prop_Data, "m_CollisionGroup", 1);
@@ -4289,7 +4262,7 @@ SpawnZoneDebugEntitys(zone)
 	AcceptEntityInput(entity2, "DisableMotion");
 	AcceptEntityInput(entity2, "DisableShadow");
 	TeleportEntity(entity2, fRightBottomFront, NULL_VECTOR, NULL_VECTOR);
-	
+
 	new entity3 = CreateEntityByName(Classname);
 	SetEntityModel(entity3, ModePath);
 	SetEntProp(entity3, Prop_Data, "m_CollisionGroup", 1);
@@ -4301,7 +4274,7 @@ SpawnZoneDebugEntitys(zone)
 	AcceptEntityInput(entity3, "DisableMotion");
 	AcceptEntityInput(entity3, "DisableShadow");
 	TeleportEntity(entity3, fLeftBottomFront, NULL_VECTOR, NULL_VECTOR);
-	
+
 	new entity4 = CreateEntityByName(Classname);
 	SetEntityModel(entity4, ModePath);
 	SetEntProp(entity4, Prop_Data, "m_CollisionGroup", 1);
@@ -4314,7 +4287,7 @@ SpawnZoneDebugEntitys(zone)
 	AcceptEntityInput(entity4, "DisableMotion");
 	AcceptEntityInput(entity4, "DisableShadow");
 	TeleportEntity(entity4, fLeftBottomBack, NULL_VECTOR, NULL_VECTOR);
-	
+
 	if(g_mapZones[zone][Type] == ZtLevel || g_mapZones[zone][Type] == ZtStart || g_mapZones[zone][Type] == ZtEnd)
 	{
 		SetEntityRenderColor(entity1, 0, 255, 0, 200);
@@ -4369,29 +4342,29 @@ Menu_NPC_Next(client, zone)
 {
 	if (0 < client < MaxClients)
 	{
-		
+
 		if(adminmode == 1 && Client_IsAdmin(client))
 		{
 			new Handle:menu = CreateMenu(Handle_Menu_NPC_Delete);
-			
+
 			SetMenuTitle(menu, "Delete this NPC?");
-			
+
 			AddMenuItem(menu, "yes", "Yes");
 			AddMenuItem(menu, "no", "No!");
-			
+
 			DisplayMenu(menu, client, MENU_TIME_FOREVER);
-			
+
 			g_iTargetNPC[client] = zone;
 		}
 		else if(g_Settings[NPCConfirm])
 		{
 			new Handle:menu = CreateMenu(Handle_Menu_NPC_Next);
-			
+
 			SetMenuTitle(menu, "Do you like to teleport?");
-			
+
 			AddMenuItem(menu, "yes", "Yes Please");
 			AddMenuItem(menu, "no", "Not now!");
-			
+
 			DisplayMenu(menu, client, MENU_TIME_FOREVER);
 		}
 		else
@@ -4403,12 +4376,12 @@ Menu_NPC_Next(client, zone)
 				vecDestination[0] = g_mapZones[g_iClientLastTrackZone[client]][Point2][0];
 				vecDestination[1] = g_mapZones[g_iClientLastTrackZone[client]][Point2][1];
 				vecDestination[2] = g_mapZones[g_iClientLastTrackZone[client]][Point2][2];
-				
-				if(Timer_IsPlayerTouchingZoneType(client, ZtStart)) Timer_SetIgnoreEndTouchStart(client, 1);
-				
+
+				if(Timer_IsPlayerTouchingStartZone(client)) Timer_SetIgnoreEndTouchStart(client, 1);
+
 				new mate;
 				if(g_timerTeams) mate = Timer_GetClientTeammate(client);
-				
+
 				if(mate > 0)
 				{
 					if(g_mapZones[zone][Type] == ZtNPC_Next_Double)
@@ -4416,7 +4389,7 @@ Menu_NPC_Next(client, zone)
 						TeleportEntity(client, vecDestination, NULL_VECTOR, velStop);
 						CreateTimer(1.5, SetBlockable, client, TIMER_FLAG_NO_MAPCHANGE);
 						SetPush(client);
-						
+
 						TeleportEntity(mate, vecDestination, NULL_VECTOR, velStop);
 						CreateTimer(1.5, SetBlockable, mate, TIMER_FLAG_NO_MAPCHANGE);
 						SetPush(mate);
@@ -4450,12 +4423,12 @@ public Handle_Menu_NPC_Next(Handle:menu, MenuAction:action, client, itemNum)
 					vecDestination[0] = g_mapZones[g_iClientLastTrackZone[client]][Point2][0];
 					vecDestination[1] = g_mapZones[g_iClientLastTrackZone[client]][Point2][1];
 					vecDestination[2] = g_mapZones[g_iClientLastTrackZone[client]][Point2][2];
-					
-					if(Timer_IsPlayerTouchingZoneType(client, ZtStart)) Timer_SetIgnoreEndTouchStart(client, 1);
-					
+
+					if(Timer_IsPlayerTouchingStartZone(client)) Timer_SetIgnoreEndTouchStart(client, 1);
+
 					new mate;
 					if(g_timerTeams) mate= Timer_GetClientTeammate(client);
-					
+
 					if(mate > 0)
 					{
 						if(Timer_GetCoopStatus(client))
@@ -4469,7 +4442,7 @@ public Handle_Menu_NPC_Next(Handle:menu, MenuAction:action, client, itemNum)
 			}
 			else if(StrEqual(info, "no"))
 			{
-				
+
 			}
 		}
 	}
@@ -4486,15 +4459,15 @@ public Handle_Menu_NPC_Delete(Handle:menu, MenuAction:action, client, itemNum)
 			if(StrEqual(info, "yes"))
 			{
 				new zone = g_iTargetNPC[client];
-				
+
 				decl String:query[64];
 				FormatEx(query, sizeof(query), "DELETE FROM mapzone WHERE id = %d", g_mapZones[zone][Id]);
-				
+
 				SQL_TQuery(g_hSQL, DeleteMapZoneCallback, query, client, DBPrio_Normal);
 			}
 			else if(StrEqual(info, "no"))
 			{
-				
+
 			}
 		}
 	}
@@ -4504,7 +4477,7 @@ ParseColor(const String:color[], result[])
 {
 	decl String:buffers[4][4];
 	ExplodeString(color, " ", buffers, sizeof(buffers), sizeof(buffers[]));
-	
+
 	for (new i = 0; i < sizeof(buffers); i++)
 		result[i] = StringToInt(buffers[i]);
 }
@@ -4517,14 +4490,14 @@ stock bool:Tele_Level(client, level)
 		{
 			if(g_mapZones[mapZone][Level_Id] < LEVEL_START)
 				continue;
-			
+
 			if (g_mapZones[mapZone][Level_Id] == level)
 			{
 				return Tele_Zone(client, mapZone);
 			}
 		}
 	}
-	
+
 	return false;
 }
 
@@ -4532,60 +4505,42 @@ stock bool:Tele_Zone(client, zone, bool:stopspeed = true, bool:overwrite_physics
 {
 	if(!IsClientInGame(client))
 		return false;
-	
+
 	// Don't teleport from inside a startzone to the same zone
 	if(g_bZone[zone][client])
 	{
 		if(g_mapZones[zone][Type] == ZtStart)
-		{
-			CPrintToChat(client, PLUGIN_PREFIX, "Already inside start zone");
 			return false;
-		}
 		else if(g_mapZones[zone][Type] == ZtBonusStart)
-		{
-			CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus start zone");
 			return false;
-		}
 		else if(g_mapZones[zone][Type] == ZtBonus2Start)
-		{
-			CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus2 start zone");
 			return false;
-		}
 		else if(g_mapZones[zone][Type] == ZtBonus3Start)
-		{
-			CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus3 start zone");
 			return false;
-		}
 		else if(g_mapZones[zone][Type] == ZtBonus4Start)
-		{
-			CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus4 start zone");
 			return false;
-		}
 		else if(g_mapZones[zone][Type] == ZtBonus5Start)
-		{
-			CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus5 start zone");
 			return false;
-		}
 	}
-	
+
 	// Get zone center cords
 	new Float:center[3];
 	center[0] = (g_mapZones[zone][Point1][0] + g_mapZones[zone][Point2][0]) / 2.0;
 	center[1] = (g_mapZones[zone][Point1][1] + g_mapZones[zone][Point2][1]) / 2.0;
-	
+
 	// Use static height
 	if(g_Settings[UseZoneTeleportZ])
 		center[2] = g_mapZones[zone][Point1][2] + g_Settings[ZoneTeleportZ];
 	// Use center height
 	else center[2] = (g_mapZones[zone][Point1][2] + g_mapZones[zone][Point2][2]) / 2.0;
-	
+
 	//If teleporting outside a startzone skip the next end touch output
-	new bool:touchstart = (Timer_IsPlayerTouchingZoneType(client, ZtStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonusStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonus2Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus3Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus4Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus5Start));
+	new bool:touchstart = Timer_IsPlayerTouchingStartZone(client);
 	new bool:targetstart = (g_mapZones[zone][Type] != ZtStart && g_mapZones[zone][Type] != ZtBonusStart && g_mapZones[zone][Type] != ZtBonus2Start && g_mapZones[zone][Type] != ZtBonus3Start && g_mapZones[zone][Type] != ZtBonus4Start && g_mapZones[zone][Type] != ZtBonus5Start);
-	
+
 	if(touchstart && targetstart)
 		Timer_SetIgnoreEndTouchStart(client, 1);
-	
+
 	// Stop speed before and after teleporting
 	if(stopspeed)
 	{
@@ -4595,7 +4550,7 @@ stock bool:Tele_Zone(client, zone, bool:stopspeed = true, bool:overwrite_physics
 		CreateTimer(0.0, Timer_StopSpeed, client, TIMER_FLAG_NO_MAPCHANGE);
 	}
 	else TeleportEntity(client, center, NULL_VECTOR, NULL_VECTOR);
-	
+
 	// Anti cheat
 	if(overwrite_physics)
 	{
@@ -4603,7 +4558,7 @@ stock bool:Tele_Zone(client, zone, bool:stopspeed = true, bool:overwrite_physics
 		SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", g_Physics[style][StyleTimeScale]);
 		SetEntityGravity(client, g_Physics[style][StyleGravity]);
 	}
-	
+
 	return true;
 }
 
@@ -4611,12 +4566,12 @@ public Action:Timer_StopSpeed(Handle:timer, any:client)
 {
 	if(!IsClientInGame(client))
 		return Plugin_Stop;
-	
+
 	if(!IsPlayerAlive(client))
 		return Plugin_Stop;
-	
+
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, Float:{0.0,0.0,-100.0});
-	
+
 	return Plugin_Stop;
 }
 
@@ -4625,24 +4580,24 @@ public Action:Command_LevelAdminMode(client, args)
 	if (args != 1)
 	{
 		ReplyToCommand(client, "[SM] Usage: sm_zoneadminmode [0/1]");
-		return Plugin_Handled;	
+		return Plugin_Handled;
 	}
 	if (args == 1)
 	{
 		decl String:name2[64];
 		GetCmdArg(1,name2,sizeof(name2));
 		adminmode = StringToInt(name2);
-		
-		if(adminmode == 1) 
+
+		if(adminmode == 1)
 		{
 			CPrintToChat(client, PLUGIN_PREFIX, "Adminmode Enabled");
 		}
-		else  
+		else
 		{
 			CPrintToChat(client, PLUGIN_PREFIX, "Adminmode Disabled");
 		}
 	}
-	return Plugin_Handled;	
+	return Plugin_Handled;
 }
 
 public Action:Command_AddZone(client, args)
@@ -4669,7 +4624,7 @@ public Action:Command_LevelName(client, args)
 	if (args != 1)
 	{
 		ReplyToCommand(client, "[SM] Usage: sm_zonename [name]");
-		return Plugin_Handled;	
+		return Plugin_Handled;
 	}
 	if (args == 1)
 	{
@@ -4677,10 +4632,10 @@ public Action:Command_LevelName(client, args)
 		GetCmdArg(1,name2,sizeof(name2));
 		decl String:query[256];
 		FormatEx(query, sizeof(query), "UPDATE mapzone SET name = '%s' WHERE id = %d", name2, g_mapZones[g_iClientLastTrackZone[client]][Id]);
-		SQL_TQuery(g_hSQL, UpdateLevelCallback, query, client, DBPrio_Normal);	
+		SQL_TQuery(g_hSQL, UpdateLevelCallback, query, client, DBPrio_Normal);
 		PrintToChat(client, "Set LevelName: %s for ZoneID: %d", name2, g_mapZones[g_iClientLastTrackZone[client]][Id]);
 	}
-	return Plugin_Handled;	
+	return Plugin_Handled;
 }
 
 public Action:Command_LevelID(client, args)
@@ -4688,19 +4643,19 @@ public Action:Command_LevelID(client, args)
 	if (args != 1)
 	{
 		ReplyToCommand(client, "[SM] Usage: sm_zoneid [id]");
-		return Plugin_Handled;	
+		return Plugin_Handled;
 	}
 	if (args == 1)
 	{
 		decl String:name2[64];
 		GetCmdArg(1, name2, sizeof(name2));
-		
+
 		decl String:query2[512];
 		FormatEx(query2, sizeof(query2), "UPDATE mapzone SET level_id = '%s' WHERE id = %d", name2, g_mapZones[g_iClientLastTrackZone[client]][Id]);
-		SQL_TQuery(g_hSQL, UpdateLevelCallback, query2, client, DBPrio_Normal);	
+		SQL_TQuery(g_hSQL, UpdateLevelCallback, query2, client, DBPrio_Normal);
 		PrintToChat(client, "Set LevelID: %s for ZoneID: %d", name2, g_mapZones[g_iClientLastTrackZone[client]][Id]);
 	}
-	return Plugin_Handled;	
+	return Plugin_Handled;
 }
 
 public Action:Command_LevelType(client, args)
@@ -4708,19 +4663,19 @@ public Action:Command_LevelType(client, args)
 	if (args != 1)
 	{
 		ReplyToCommand(client, "[SM] Usage: sm_zonetype");
-		return Plugin_Handled;	
+		return Plugin_Handled;
 	}
 	if (args == 1)
 	{
 		decl String:name2[64];
 		GetCmdArg(1, name2, sizeof(name2));
-		
+
 		decl String:query2[512];
 		FormatEx(query2, sizeof(query2), "UPDATE mapzone SET type = '%s' WHERE id = %d", name2, g_mapZones[g_iClientLastTrackZone[client]][Id]);
-		SQL_TQuery(g_hSQL, UpdateLevelCallback, query2, client, DBPrio_Normal);	
+		SQL_TQuery(g_hSQL, UpdateLevelCallback, query2, client, DBPrio_Normal);
 		PrintToChat(client, "Set Type: %s for ZoneID: %d", name2, g_mapZones[g_iClientLastTrackZone[client]][Id]);
 	}
-	return Plugin_Handled;	
+	return Plugin_Handled;
 }
 
 public UpdateLevelCallback(Handle:owner, Handle:hndl, const String:error[], any:data)
@@ -4730,7 +4685,7 @@ public UpdateLevelCallback(Handle:owner, Handle:hndl, const String:error[], any:
 		Timer_LogError("SQL Error on UpdateZone: %s", error);
 		return;
 	}
-	
+
 	LoadMapZones();
 }
 
@@ -4738,21 +4693,44 @@ public Action:Command_Stuck(client, args)
 {
 	if(!g_Settings[StuckEnable])
 		return Plugin_Handled;
-	
-	if(!IsClientInGame(client)) 
+
+	if(!IsClientInGame(client))
 		return Plugin_Handled;
-	
-	if(!IsPlayerAlive(client)) 
+
+	if(!IsPlayerAlive(client))
 		return Plugin_Handled;
-	
+
+	if(Timer_IsPlayerTouchingZoneType(client, ZtStart) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonusStart) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus2Start) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus3Start) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus4Start) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus5Start) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtCheckpoint) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonusCheckpoint) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus2Checkpoint) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus3Checkpoint) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus4Checkpoint) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus5Checkpoint) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtLevel) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonusLevel) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus2Level) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus3Level) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus4Level) || 
+	Timer_IsPlayerTouchingZoneType(client, ZtBonus5Level))
+	{
+		CPrintToChat(client, "%s You can't use this command inside this zone type.", PLUGIN_PREFIX2);
+		return Plugin_Handled;
+	}
+
 	if(Timer_GetStatus(client) && g_Settings[StuckPenaltyTime] > 0)
 	{
 		Timer_AddPenaltyTime(client, g_Settings[StuckPenaltyTime]);
 		CPrintToChat(client, "%s You have used !stuck and got an %ds penalty time.", PLUGIN_PREFIX2, RoundToFloor(g_Settings[StuckPenaltyTime]));
 	}
-	
+
 	TeleLastCheckpoint(client);
-	
+
 	return Plugin_Handled;
 }
 
@@ -4760,19 +4738,56 @@ public Action:Command_Restart(client, args)
 {
 	if(!g_Settings[RestartEnable])
 		return Plugin_Handled;
-	
-	if(!IsClientInGame(client)) 
+
+	if(!IsClientInGame(client))
 		return Plugin_Handled;
-		
+
 	if(Timer_GetMapzoneCount(ZtStart) < 1)
 		return Plugin_Handled;
-	
-	if(Timer_IsPlayerTouchingZoneType(client, ZtStart))
+
+	new track = Timer_GetTrack(client);
+
+	if(track == TRACK_NORMAL && Timer_IsPlayerTouchingZoneType(client, ZtStart))
 	{
-		CPrintToChat(client, PLUGIN_PREFIX, "Already inside start zone");
+		//CPrintToChat(client, PLUGIN_PREFIX, "Already inside start zone");
 		return Plugin_Handled;
 	}
-	
+
+	if(track == TRACK_BONUS && Timer_IsPlayerTouchingZoneType(client, ZtBonusStart))
+	{
+		Timer_SetTrack(client, TRACK_NORMAL);
+		Client_Start(client);
+		return Plugin_Handled;
+	}
+
+	if(track == TRACK_BONUS2 && Timer_IsPlayerTouchingZoneType(client, ZtBonus2Start))
+	{
+		Timer_SetTrack(client, TRACK_NORMAL);
+		Client_Start(client);
+		return Plugin_Handled;
+	}
+
+	if(track == TRACK_BONUS3 && Timer_IsPlayerTouchingZoneType(client, ZtBonus3Start))
+	{
+		Timer_SetTrack(client, TRACK_NORMAL);
+		Client_Start(client);
+		return Plugin_Handled;
+	}
+
+	if(track == TRACK_BONUS4 && Timer_IsPlayerTouchingZoneType(client, ZtBonus4Start))
+	{
+		Timer_SetTrack(client, TRACK_NORMAL);
+		Client_Start(client);
+		return Plugin_Handled;
+	}
+
+	if(track == TRACK_BONUS5 && Timer_IsPlayerTouchingZoneType(client, ZtBonus5Start))
+	{
+		Timer_SetTrack(client, TRACK_NORMAL);
+		Client_Start(client);
+		return Plugin_Handled;
+	}
+
 	if(g_timerTeams)
 	{
 		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
@@ -4781,9 +4796,12 @@ public Action:Command_Restart(client, args)
 			return Plugin_Handled;
 		}
 	}
-	
-	Client_Restart(client);
-	
+
+	if(track == TRACK_NORMAL)
+		Client_Start(client);
+	else
+		Client_BonusRestart(client, track);
+
 	return Plugin_Handled;
 }
 
@@ -4791,11 +4809,11 @@ public Action:Command_Start(client, args)
 {
 	if(!g_Settings[StartEnable])
 		return Plugin_Handled;
-		
+
 	decl String:slevel[64];
 	GetCmdArg(1, slevel, sizeof(slevel));
 	new level = StringToInt(slevel);
-	
+
 	if(level > 0)
 	{
 		if(g_timerTeams)
@@ -4806,18 +4824,18 @@ public Action:Command_Start(client, args)
 				return Plugin_Handled;
 			}
 		}
-		
+
 		Timer_Reset(client);
 		Tele_Level(client, level);
 		return Plugin_Handled;
 	}
-	
-	if(!IsClientInGame(client)) 
+
+	if(!IsClientInGame(client))
 		return Plugin_Handled;
-		
+
 	if(Timer_GetMapzoneCount(ZtStart) < 1)
 		return Plugin_Handled;
-	
+
 	if(g_timerTeams)
 	{
 		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
@@ -4826,9 +4844,9 @@ public Action:Command_Start(client, args)
 			return Plugin_Handled;
 		}
 	}
-	
+
 	Client_Start(client);
-	
+
 	return Plugin_Handled;
 }
 
@@ -4836,22 +4854,22 @@ public Action:Command_BonusRestart(client, args)
 {
 	if(!g_Settings[StartEnable])
 		return Plugin_Handled;
-	
-	if(!IsClientInGame(client)) 
+
+	if(!IsClientInGame(client))
 		return Plugin_Handled;
-	
+
 	if(Timer_IsPlayerTouchingZoneType(client, ZtBonusStart))
 	{
-		CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus start zone");
+		//CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus start zone");
 		return Plugin_Handled;
 	}
-		
+
 	if(Timer_GetMapzoneCount(ZtBonusStart) < 1)
 	{
 		CPrintToChat(client, PLUGIN_PREFIX, "There is no bonus in this map");
 		return Plugin_Handled;
 	}
-	
+
 	if(g_timerTeams)
 	{
 		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
@@ -4860,9 +4878,9 @@ public Action:Command_BonusRestart(client, args)
 			return Plugin_Handled;
 		}
 	}
-	
+
 	Client_BonusRestart(client, TRACK_BONUS);
-	
+
 	return Plugin_Handled;
 }
 
@@ -4870,22 +4888,22 @@ public Action:Command_Bonus2Restart(client, args)
 {
 	if(!g_Settings[StartEnable])
 		return Plugin_Handled;
-	
-	if(!IsClientInGame(client)) 
+
+	if(!IsClientInGame(client))
 		return Plugin_Handled;
-	
+
 	if(Timer_IsPlayerTouchingZoneType(client, ZtBonus2Start))
 	{
-		CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus2 start zone");
+		//CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus2 start zone");
 		return Plugin_Handled;
 	}
-		
+
 	if(Timer_GetMapzoneCount(ZtBonus2Start) < 1)
 	{
 		CPrintToChat(client, PLUGIN_PREFIX, "There is no bonus2 in this map");
 		return Plugin_Handled;
 	}
-	
+
 	if(g_timerTeams)
 	{
 		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
@@ -4894,9 +4912,9 @@ public Action:Command_Bonus2Restart(client, args)
 			return Plugin_Handled;
 		}
 	}
-	
+
 	Client_BonusRestart(client, TRACK_BONUS2);
-	
+
 	return Plugin_Handled;
 }
 
@@ -4904,22 +4922,22 @@ public Action:Command_Bonus3Restart(client, args)
 {
 	if(!g_Settings[StartEnable])
 		return Plugin_Handled;
-	
-	if(!IsClientInGame(client)) 
+
+	if(!IsClientInGame(client))
 		return Plugin_Handled;
-	
+
 	if(Timer_IsPlayerTouchingZoneType(client, ZtBonus3Start))
 	{
-		CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus3 start zone");
+		//CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus3 start zone");
 		return Plugin_Handled;
 	}
-		
+
 	if(Timer_GetMapzoneCount(ZtBonus3Start) < 1)
 	{
 		CPrintToChat(client, PLUGIN_PREFIX, "There is no bonus3 in this map");
 		return Plugin_Handled;
 	}
-	
+
 	if(g_timerTeams)
 	{
 		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
@@ -4928,9 +4946,9 @@ public Action:Command_Bonus3Restart(client, args)
 			return Plugin_Handled;
 		}
 	}
-	
+
 	Client_BonusRestart(client, TRACK_BONUS3);
-	
+
 	return Plugin_Handled;
 }
 
@@ -4938,22 +4956,22 @@ public Action:Command_Bonus4Restart(client, args)
 {
 	if(!g_Settings[StartEnable])
 		return Plugin_Handled;
-	
-	if(!IsClientInGame(client)) 
+
+	if(!IsClientInGame(client))
 		return Plugin_Handled;
-	
+
 	if(Timer_IsPlayerTouchingZoneType(client, ZtBonus4Start))
 	{
-		CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus4 start zone");
+		//CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus4 start zone");
 		return Plugin_Handled;
 	}
-		
+
 	if(Timer_GetMapzoneCount(ZtBonus4Start) < 1)
 	{
 		CPrintToChat(client, PLUGIN_PREFIX, "There is no bonus4 in this map");
 		return Plugin_Handled;
 	}
-	
+
 	if(g_timerTeams)
 	{
 		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
@@ -4962,9 +4980,9 @@ public Action:Command_Bonus4Restart(client, args)
 			return Plugin_Handled;
 		}
 	}
-	
+
 	Client_BonusRestart(client, TRACK_BONUS4);
-	
+
 	return Plugin_Handled;
 }
 
@@ -4972,22 +4990,22 @@ public Action:Command_Bonus5Restart(client, args)
 {
 	if(!g_Settings[StartEnable])
 		return Plugin_Handled;
-	
-	if(!IsClientInGame(client)) 
+
+	if(!IsClientInGame(client))
 		return Plugin_Handled;
-	
+
 	if(Timer_IsPlayerTouchingZoneType(client, ZtBonus5Start))
 	{
-		CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus5 start zone");
+		//CPrintToChat(client, PLUGIN_PREFIX, "Already inside bonus5 start zone");
 		return Plugin_Handled;
 	}
-		
+
 	if(Timer_GetMapzoneCount(ZtBonus5Start) < 1)
 	{
 		CPrintToChat(client, PLUGIN_PREFIX, "There is no bonus5 in this map");
 		return Plugin_Handled;
 	}
-	
+
 	if(g_timerTeams)
 	{
 		if(Timer_GetChallengeStatus(client) == 1 || Timer_GetCoopStatus(client) == 1)
@@ -4996,36 +5014,47 @@ public Action:Command_Bonus5Restart(client, args)
 			return Plugin_Handled;
 		}
 	}
-	
+
 	Client_BonusRestart(client, TRACK_BONUS5);
-	
+
 	return Plugin_Handled;
 }
+
+new g_iConfirmTrack[MAXPLAYERS+1];
 
 ConfirmAbortMenu(client, track)
 {
 	if (0 < client < MaxClients)
 	{
 		new Handle:menu = CreateMenu(Handle_ConfirmAbortMenu);
-		
+
 		new mate;
 		if(g_timerTeams) mate = Timer_GetClientTeammate(client);
-		
+
+		SetMenuTitle(menu, "Please confirm your action.");
+
 		if(mate > 0)
 		{
 			if(Timer_GetChallengeStatus(client) == 1)
-				SetMenuTitle(menu, "Are you sure to quit the Challenge?");
+			{
+				AddMenuItem(menu, "no", "Do nothing");
+				AddMenuItem(menu, "tele", "Teleport me back");
+				AddMenuItem(menu, "unmate", "Cancel challenge");
+			}
 			else if(Timer_GetCoopStatus(client) == 1)
-				SetMenuTitle(menu, "Are you sure to quit the Coop?");
-		}else SetMenuTitle(menu, "Are you sure to quit?");
-		
-		decl String:info[8];
-		IntToString(track, info, sizeof(info));
-		
-		AddMenuItem(menu, info, "Yes");
-		
-		AddMenuItem(menu, "no", "No");
-		
+			{
+				AddMenuItem(menu, "no", "Do nothing");
+				AddMenuItem(menu, "tele", "Teleport me back");
+				AddMenuItem(menu, "unmate", "Cancel partner");
+			}
+		}
+		else
+		{
+			AddMenuItem(menu, "yes", "Yes, Teleport me back");
+			AddMenuItem(menu, "no", "No");
+		}
+
+		g_iConfirmTrack[client] = track;
 		DisplayMenu(menu, client, 5);
 	}
 }
@@ -5039,11 +5068,16 @@ public Handle_ConfirmAbortMenu(Handle:menu, MenuAction:action, client, itemNum)
 		if(found)
 		{
 			new track = StringToInt(info);
-			
+
+			if(!StrEqual(info, "no"))
+			{
+
+			}
+
 			if(track == -1)
 			{
 				Client_Restart(client);
-				
+
 			}
 			else if(track == TRACK_NORMAL)
 			{
@@ -5059,28 +5093,28 @@ public Handle_ConfirmAbortMenu(Handle:menu, MenuAction:action, client, itemNum)
 
 bool:Client_Start(client)
 {
-	if(!IsClientInGame(client)) 
+	if(!IsClientInGame(client))
 		return false;
-	
+
 	//Has player a valid team
 	if(GetClientTeam(client) != CS_TEAM_CT && GetClientTeam(client) != CS_TEAM_T)
 	{
 		new validteam = CS_GetValidSpawnTeam();
-		
+
 		if(validteam != CS_TEAM_NONE)
 		{
 			CS_SwitchTeam(client, validteam);
 		}
-		else Timer_LogError("No spawn points for %s", g_currentMap);
+		else CS_SwitchTeam(client, CS_TEAM_CT);
 	}
-	
+
 	new style = Timer_GetStyle(client);
-	
+
 	//Stop timer
 	Timer_Reset(client);
-	
+
 	//Is player alive
-	if(!IsPlayerAlive(client)) 
+	if(!IsPlayerAlive(client))
 	{
 		CS_RespawnPlayer(client);
 	}
@@ -5090,39 +5124,39 @@ bool:Client_Start(client)
 		SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", g_Physics[style][StyleTimeScale]);
 		SetEntityGravity(client, g_Physics[style][StyleGravity]);
 	}
-	
+
 	//Teleport player to starzone
 	Tele_Level(client, LEVEL_START);
-	
+
 	return true;
 }
 
 bool:Client_Restart(client, bool:teleport = true)
 {
-	if(!IsClientInGame(client)) 
+	if(!IsClientInGame(client))
 		return false;
-	
+
 	//Has player a valid team
 	if(GetClientTeam(client) != CS_TEAM_CT && GetClientTeam(client) != CS_TEAM_T)
 	{
 		new validteam = CS_GetValidSpawnTeam();
-		
+
 		if(validteam != CS_TEAM_NONE)
 		{
 			CS_SwitchTeam(client, validteam);
 		}
-		else Timer_LogError("No spawn points for %s", g_currentMap);
+		else CS_SwitchTeam(client, CS_TEAM_CT);
 	}
-	
+
 	new style = Timer_GetStyle(client);
-	
+
 	//Stop timer
 	Timer_Reset(client);
-	
+
 	new bool:respawn = true;
-	
+
 	//Is player alive
-	if(!IsPlayerAlive(client)) 
+	if(!IsPlayerAlive(client))
 	{
 		CS_RespawnPlayer(client);
 		respawn = false;
@@ -5133,45 +5167,45 @@ bool:Client_Restart(client, bool:teleport = true)
 		SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", g_Physics[style][StyleTimeScale]);
 		SetEntityGravity(client, g_Physics[style][StyleGravity]);
 	}
-	
+
 	//Teleport player to starzone
 	if(g_Settings[TeleportOnRestart] && teleport)
 	{
 		Tele_Level(client, LEVEL_START);
-	} 
+	}
 	//Or just respawn him
 	else if(respawn)
 	{
 		CS_RespawnPlayer(client);
 	}
-	
+
 	return true;
 }
 
 bool:Client_BonusRestart(client, track)
 {
-	if(!IsClientInGame(client)) 
+	if(!IsClientInGame(client))
 		return false;
-	
+
 	//Has player a valid team
 	if(GetClientTeam(client) != CS_TEAM_CT && GetClientTeam(client) != CS_TEAM_T)
 	{
 		new validteam = CS_GetValidSpawnTeam();
-		
+
 		if(validteam != CS_TEAM_NONE)
 		{
 			CS_SwitchTeam(client, validteam);
 		}
 		else Timer_LogError("No spawn points for %s", g_currentMap);
 	}
-	
+
 	new style = Timer_GetStyle(client);
-	
+
 	//Stop timer
 	Timer_Reset(client);
-	
+
 	//Is player alive
-	if(!IsPlayerAlive(client)) 
+	if(!IsPlayerAlive(client))
 	{
 		CS_RespawnPlayer(client);
 	}
@@ -5181,7 +5215,7 @@ bool:Client_BonusRestart(client, track)
 		SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", g_Physics[style][StyleTimeScale]);
 		SetEntityGravity(client, g_Physics[style][StyleGravity]);
 	}
-	
+
 	//Teleport player to bonus-starzone
 	if(track == TRACK_BONUS)
 		return Tele_Level(client, LEVEL_BONUS_START);
@@ -5193,7 +5227,7 @@ bool:Client_BonusRestart(client, track)
 		return Tele_Level(client, LEVEL_BONUS4_START);
 	else if(track == TRACK_BONUS5)
 		return Tele_Level(client, LEVEL_BONUS5_START);
-	
+
 	return true;
 }
 
@@ -5207,17 +5241,17 @@ AdminZoneTeleport(client)
 {
 	new Handle:menu = CreateMenu(MenuHandlerAdminZone);
 	SetMenuTitle(menu, "Zone Selection");
-	
+
 	for (new zone = 0; zone < g_mapZonesCount; zone++)
 	{
 		decl String:zone_name[32];
 		FormatEx(zone_name, sizeof(zone_name), "%s", g_mapZones[zone][zName]);
-		
+
 		decl String:zone_id[32];
 		FormatEx(zone_id,sizeof(zone_id), "%d", zone);
 		AddMenuItem(menu, zone_id, zone_name);
 	}
-	
+
 	SetMenuExitButton(menu, true);
 	DisplayMenu(menu, client, MENU_TIME_FOREVER);
 }
@@ -5247,17 +5281,17 @@ AdminZoneDelete(client)
 {
 	new Handle:menu = CreateMenu(MenuHandlerAdminZoneDelete);
 	SetMenuTitle(menu, "Zone Selection");
-	
+
 	for (new zone = 0; zone < g_mapZonesCount; zone++)
 	{
 		decl String:zone_name[32];
 		FormatEx(zone_name, sizeof(zone_name), "%s", g_mapZones[zone][zName]);
-		
+
 		decl String:zone_id[32];
 		FormatEx(zone_id,sizeof(zone_id), "%d", zone);
 		AddMenuItem(menu, zone_id, zone_name);
 	}
-	
+
 	SetMenuExitButton(menu, true);
 	DisplayMenu(menu, client, MENU_TIME_FOREVER);
 }
@@ -5273,7 +5307,7 @@ public MenuHandlerAdminZoneDelete(Handle:menu, MenuAction:action, client, param2
 		{
 			decl String:query[64];
 			FormatEx(query, sizeof(query), "DELETE FROM mapzone WHERE id = %d", g_mapZones[zone][Id]);
-			
+
 			SQL_TQuery(g_hSQL, DeleteMapZoneCallback, query, client, DBPrio_Normal);
 		}
 	}
@@ -5287,7 +5321,7 @@ public Action:Command_Levels(client, args)
 	decl String:slevel[64];
 	GetCmdArg(1, slevel, sizeof(slevel));
 	new level = StringToInt(slevel);
-	
+
 	if(level > 0)
 	{
 		if(g_timerTeams)
@@ -5298,33 +5332,33 @@ public Action:Command_Levels(client, args)
 				return Plugin_Handled;
 			}
 		}
-		
+
 		Timer_Reset(client);
 		Tele_Level(client, level);
 		return Plugin_Handled;
 	}
-	
+
 	new Handle:menu = CreateMenu(MenuHandlerLevels);
 	SetMenuTitle(menu, "Stage Teleport Selection");
-	
+
 	for (new zone = 0; zone < g_mapZonesCount; zone++)
 	{
 		if(g_mapZones[zone][Level_Id] < 1)
 		{
 			continue;
 		}
-		
+
 		decl String:zone_name[32];
 		FormatEx(zone_name, sizeof(zone_name), "%s", g_mapZones[zone][zName]);
-		
+
 		decl String:zone_id[32];
 		FormatEx(zone_id,sizeof(zone_id), "%d", zone);
 		AddMenuItem(menu, zone_id, zone_name);
 	}
-	
+
 	SetMenuExitButton(menu, true);
 	DisplayMenu(menu, client, 20);
-	
+
 	return Plugin_Handled;
 }
 
@@ -5347,20 +5381,20 @@ public Native_AddMapZone(Handle:plugin, numParams)
 {
 	decl String:map[32];
 	GetNativeString(1, map, sizeof(map));
-	
-	new MapZoneType:type = GetNativeCell(2);	
-	
+
+	new MapZoneType:type = GetNativeCell(2);
+
 	decl String:name[32];
 	GetNativeString(1, name, sizeof(name));
-	
+
 	new level_id = GetNativeCell(2);
-	
+
 	new Float:point1[3];
 	GetNativeArray(3, point1, sizeof(point1));
-	
+
 	new Float:point2[3];
 	GetNativeArray(3, point2, sizeof(point2));
-	
+
 	AddMapZone(map, type, name, level_id, point1, point2);
 }
 
@@ -5392,10 +5426,10 @@ public Native_GetClientLevelID(Handle:plugin, numParams)
 public Native_GetLevelName(Handle:plugin, numParams)
 {
 	new id = GetNativeCell(1);
-	new nlen = GetNativeCell(3); 
+	new nlen = GetNativeCell(3);
 	if (nlen <= 0)
 		return false;
-	
+
 	for (new i = 0; i < g_mapZonesCount; i++)
 	{
 		if(g_mapZones[i][Level_Id] == id)
@@ -5406,7 +5440,7 @@ public Native_GetLevelName(Handle:plugin, numParams)
 				return true;
 		}
 	}
-	
+
 	return false;
 }
 
@@ -5436,7 +5470,7 @@ public Native_IsPlayerTouchingZoneType(Handle:plugin, numParams)
 {
 	new client = GetNativeCell(1);
 	new MapZoneType:type = GetNativeCell(2);
-	
+
 	return IsPlayerTouchingZoneType(client, type);
 }
 
@@ -5446,18 +5480,18 @@ IsPlayerTouchingZoneType(client, MapZoneType:type)
 	{
 		if(g_mapZones[i][Type] != type)
 			continue;
-		
+
 		if(g_bZone[i][client])
 			return 1;
 	}
-	
+
 	return 0;
 }
 
 public Native_GetMapzoneCount(Handle:plugin, numParams)
 {
 	new MapZoneType:type = GetNativeCell(1);
-	
+
 	new count = 0;
 
 	if(type == ZtLevel || type == ZtBonusLevel)
@@ -5470,11 +5504,11 @@ public Native_GetMapzoneCount(Handle:plugin, numParams)
 				LevelID[mapZone] = g_mapZones[mapZone][Level_Id];
 			}
 		}
-		
+
 		SortIntegers(LevelID, g_mapZonesCount, Sort_Ascending);
-		
+
 		new lastlevel;
-		
+
 		for (new mapZone = 0; mapZone < g_mapZonesCount; mapZone++)
 		{
 			if (LevelID[mapZone] > lastlevel)
@@ -5494,13 +5528,13 @@ public Native_GetMapzoneCount(Handle:plugin, numParams)
 			}
 		}
 	}
-	
+
 	return count;
 }
 
 public bool:FilterOnlyPlayers(entity, contentsMask, any:data)
 {
-	if(entity != data && entity > 0 && entity <= MaxClients) 
+	if(entity != data && entity > 0 && entity <= MaxClients)
 		return true;
 	return false;
 }
@@ -5533,19 +5567,19 @@ public Action:Hook_NormalSound(clients[64], &numClients, String:sample[PLATFORM_
 	if (g_Settings[DisableDoorSounds])
 	if (StrContains(sample, "door") != -1)
 		return Plugin_Stop;
-	
+
 	if (g_Settings[DisableButtonSounds])
 	if (StrContains(sample, "button") != -1)
 		return Plugin_Stop;
-	
+
 	return Plugin_Continue;
 }
 
 public Action:Command_ToggleTeleporters(client, args)
 {
 	ToggleTeleporters(client);
-	
-	return Plugin_Handled;	
+
+	return Plugin_Handled;
 }
 
 stock ToggleTeleporters(client)
@@ -5553,12 +5587,12 @@ stock ToggleTeleporters(client)
 	if(g_bTeleportersDisabled)
 	{
 		g_bTeleportersDisabled = false;
-		
+
 		ReplyToCommand(client, "(Re-)Enabled all trigger_teleport entitys");
-		
+
 		new entity;
 		decl String:targetname[256];
-		
+
 		while ((entity = FindEntityByClassname(entity, "info_teleport_destination")) != -1)
 		{
 			GetEntPropString(entity, Prop_Data, "m_iName", targetname, sizeof(targetname));
@@ -5569,12 +5603,12 @@ stock ToggleTeleporters(client)
 	else
 	{
 		g_bTeleportersDisabled = true;
-		
+
 		ReplyToCommand(client, "Disabled all trigger_teleport entitys");
-		
+
 		new entity;
 		decl String:targetname[256];
-		
+
 		while ((entity = FindEntityByClassname(entity, "info_teleport_destination")) != -1)
 		{
 			GetEntPropString(entity, Prop_Data, "m_iName", targetname, sizeof(targetname));
@@ -5597,13 +5631,13 @@ stock FixAngRotation()
 	{
 		new Float:ang[3];
 		GetEntPropVector(entity, Prop_Send, "m_angRotation", ang);
-		
+
 		if(ang[0] > 360.0 || ang[1] > 360.0 || ang[2] > 360.0 || ang[0] < -360.0 || ang[1] < -360.0 || ang[2] < -360.0)
 		{
 			ang[0] = float(RoundToFloor(ang[0]) % 60);
 			ang[1] = float(RoundToFloor(ang[1]) % 60);
 			ang[2] = float(RoundToFloor(ang[2]) % 60);
-			
+
 			SetEntPropVector(entity, Prop_Send, "m_angRotation", ang);
 		}
 	}

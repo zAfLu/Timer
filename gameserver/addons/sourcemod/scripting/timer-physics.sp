@@ -18,16 +18,11 @@
 #include <timer-rankings>
 #include <timer-mapzones>
 
-enum UserJumps
-{
-	Float:LastJumpTimes[4],
-}
-
 new bool:g_timerMapzones = false;
 new bool:g_timerLjStats = false;
 new bool:g_timerRankings = false;
 
-new g_userJumps[MAXPLAYERS][UserJumps];
+new Float:g_fLastJumps[MAXPLAYERS][4];
 
 new Handle:g_OnClientMaxJumpHeight;
 new Handle:g_OnClientApplyDifficulty;
@@ -159,7 +154,7 @@ public Plugin:myinfo =
 public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 {
 	RegPluginLibrary("timer-physics");
-	
+
 	CreateNative("Timer_GetForceStyle", Native_GetForceStyle);
 	CreateNative("Timer_GetPickedStyle", Native_GetPickedStyle);
 	CreateNative("Timer_ApplyPhysics", Native_ApplyPhysics);
@@ -168,9 +163,11 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 	CreateNative("Timer_GetMaxSpeed", Native_GetMaxSpeed);
 	CreateNative("Timer_GetAvgSpeed", Native_GetAvgSpeed);
 	CreateNative("Timer_ResetAccuracy", Native_ResetAccuracy);
+	CreateNative("Timer_SaveLastJumps", Native_SaveLastJumps);
+	CreateNative("Timer_RestoreLastJumps", Native_RestoreLastJumps);
 
 	g_bLateLoaded = late;
-	
+
 	return APLRes_Success;
 }
 
@@ -178,22 +175,22 @@ public OnPluginStart()
 {
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	new Handle:hGameConf = INVALID_HANDLE;
 	hGameConf = LoadGameConfigFile("sdkhooks.games");
-	if(hGameConf == INVALID_HANDLE) 
+	if(hGameConf == INVALID_HANDLE)
 	{
 		SetFailState("GameConfigFile sdkhooks.games was not found");
 		return;
 	}
-	
+
 	LoadTranslations("timer.phrases");
-	
+
 	HookEvent("round_start",Event_RoundStart,EventHookMode_PostNoCopy);
-	
+
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_jump", Event_PlayerJump);
-	
+
 	RegAdminCmd("sm_timer_reload_config", Command_ReloadConfig, ADMFLAG_CONVARS, "Reload timer settings");
 	if(g_Settings[MultimodeEnable]) RegConsoleCmd("sm_style", Command_Difficulty);
 	if(g_Settings[NoclipEnable]) RegConsoleCmd("sm_nc", Command_NoclipMe);
@@ -202,24 +199,24 @@ public OnPluginStart()
 	if(g_Settings[BhopEnable]) RegConsoleCmd("sm_autobhop", Command_ToggleAuto);
 	if(g_Settings[BhopEnable]) RegConsoleCmd("sm_autojump", Command_ToggleAuto);
 	RegAdminCmd("sm_colour", Command_Colour, ADMFLAG_RESERVATION);
-	
+
 	g_hPlattformColor = CreateConVar("timer_plattform_color", "0 255 0 255", "The color of detected plattforms.");
-	
+
 	HookConVarChange(g_hPlattformColor, Action_OnSettingsChange);
-	
+
 	AutoExecConfig(true, "timer/timer-physics");
-	
+
 	new String:buffer[32];
 	GetConVarString(g_hPlattformColor, buffer, sizeof(buffer));
 	ParseColor(buffer, g_PlattformColor);
-	
+
 	StartPrepSDKCall(SDKCall_Entity);
 	PrepSDKCall_SetFromConf(hGameConf,SDKConf_Virtual,"Touch");
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity,SDKPass_Pointer);
 	g_hSDK_Touch = EndPrepSDKCall();
 	CloseHandle(hGameConf);
 
-	if(g_hSDK_Touch == INVALID_HANDLE) 
+	if(g_hSDK_Touch == INVALID_HANDLE)
 	{
 		SetFailState("Unable to prepare virtual function CBaseEntity::Touch");
 		return;
@@ -230,17 +227,17 @@ public OnPluginStart()
 	g_iOffs_vecMins = FindSendPropInfo("CBaseEntity","m_vecMins");
 	g_iOffs_vecMaxs = FindSendPropInfo("CBaseEntity","m_vecMaxs");
 	g_iOffs_Velocity = FindSendPropOffs("CBasePlayer", "m_vecVelocity[0]");
-	
+
 	g_timerMapzones = LibraryExists("timer-mapzones");
 	g_timerLjStats = LibraryExists("timer-ljstats");
 	g_timerRankings = LibraryExists("timer-rankings");
 
-	
+
 	g_OnClientMaxJumpHeight = CreateGlobalForward("OnClientMaxJumpHeight", ET_Event, Param_Cell, Param_Cell);
 	g_OnClientApplyDifficulty = CreateGlobalForward("OnClientApplyDifficulty", ET_Event, Param_Cell, Param_Cell);
 	g_OnClientApplyDifficultyPre = CreateGlobalForward("OnClientApplyDifficultyPre", ET_Event, Param_Cell, Param_Cell);
-	
-	if(g_bLateLoaded) 
+
+	if(g_bLateLoaded)
 	{
 		OnPluginPauseChange(false);
 	}
@@ -251,31 +248,31 @@ public OnLibraryAdded(const String:name[])
 	if (StrEqual(name, "timer-mapzones"))
 	{
 		g_timerMapzones = true;
-	}		
+	}
 	else if (StrEqual(name, "timer-ljstats"))
 	{
 		g_timerLjStats = true;
-	}	
+	}
 	else if (StrEqual(name, "timer-rankings"))
 	{
 		g_timerRankings = true;
-	}		
+	}
 }
 
 public OnLibraryRemoved(const String:name[])
-{	
+{
 	if (StrEqual(name, "timer-mapzones"))
 	{
 		g_timerMapzones = false;
-	}		
+	}
 	else if (StrEqual(name, "timer-ljstats"))
 	{
 		g_timerLjStats = false;
-	}		
+	}
 	else if (StrEqual(name, "timer-rankings"))
 	{
 		g_timerRankings = false;
-	}		
+	}
 }
 
 public Action_OnSettingsChange(Handle:cvar, const String:oldvalue[], const String:newvalue[])
@@ -284,9 +281,9 @@ public Action_OnSettingsChange(Handle:cvar, const String:oldvalue[], const Strin
 		ParseColor(newvalue, g_PlattformColor);
 }
 
-public OnPluginPauseChange(bool:pause) 
+public OnPluginPauseChange(bool:pause)
 {
-	if(pause) 
+	if(pause)
 	{
 		OnPluginEnd();
 	}
@@ -302,7 +299,7 @@ stock ResetMultiBhop()
 	g_iBhopButtonCount = 0;
 
 	FindBhopBlocks();
-	
+
 	AlterBhopBlocks(true);
 
 	g_iBhopDoorCount = 0;
@@ -310,12 +307,12 @@ stock ResetMultiBhop()
 	FindBhopBlocks();
 }
 
-public Event_RoundStart(Handle:event,const String:name[],bool:dontBroadcast) 
+public Event_RoundStart(Handle:event,const String:name[],bool:dontBroadcast)
 {
 	OnPluginPauseChange(false);
 }
 
-public OnPluginEnd() 
+public OnPluginEnd()
 {
 	AlterBhopBlocks(true);
 
@@ -331,7 +328,7 @@ public OnClientPutInServer(client)
 	g_PlattformColorPlayer[client][3] = 255;
 	g_colourme[client] = 0;
 	g_fBoost[client] = 0.0;
-	
+
 	ResetBhopAvoid(client);
 	ResetBhopCollect(client);
 }
@@ -350,7 +347,7 @@ stock ResetStats(client)
 	g_PlattformColorPlayer[client][1] = GetRandomInt(10, 245);
 	g_PlattformColorPlayer[client][2] = GetRandomInt(10, 245);
 	g_PlattformColorPlayer[client][3] = 255;
-	
+
 	g_fSpeedCurrent[client] = 0.0;
 	g_fSpeedMax[client] = 0.0;
 	g_fSpeedTotal[client] = 0.0;
@@ -359,14 +356,14 @@ stock ResetStats(client)
 
 Teleport(client, bhop, style)
 {
-	
+
 	decl i;
 	new tele = -1, ent = bhop;
 
 	//search door trigger list
-	for (i = 0; i < g_iBhopDoorCount; i++) 
+	for (i = 0; i < g_iBhopDoorCount; i++)
 	{
-		if(ent == g_iBhopDoorList[i]) 
+		if(ent == g_iBhopDoorList[i])
 		{
 			tele = g_iBhopDoorTeleList[i];
 			break;
@@ -374,11 +371,11 @@ Teleport(client, bhop, style)
 	}
 
 	//no destination? search button trigger list
-	if(tele == -1) 
+	if(tele == -1)
 	{
-		for (i = 0; i < g_iBhopButtonCount; i++) 
+		for (i = 0; i < g_iBhopButtonCount; i++)
 		{
-			if(ent == g_iBhopButtonList[i]) 
+			if(ent == g_iBhopButtonList[i])
 			{
 				tele = g_iBhopButtonTeleList[i];
 				break;
@@ -387,7 +384,7 @@ Teleport(client, bhop, style)
 	}
 
 	//set teleport destination
-	if(tele != -1 && IsValidEntity(tele) && g_Physics[style][StyleMultiBhop] != 2) 
+	if(tele != -1 && IsValidEntity(tele) && g_Physics[style][StyleMultiBhop] != 2)
 	{
 		SDKCall(g_hSDK_Touch,tele,client);
 	}
@@ -397,12 +394,12 @@ public OnMapStart()
 {
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	if(!g_Settings[NoGravityUpdate]) CreateTimer(1.0, Timer_UpdateGravity, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 	CreateTimer(0.1, Timer_CheckNoClip, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
-	
+
 	g_iVegasWinCount = 0;
-	
+
 	ResetMultiBhop();
 }
 
@@ -417,34 +414,34 @@ public OnMapEnd()
 public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new client = GetClientOfUserId(GetEventInt(event, "userid"));
-	
+
 	if(0 < client <= MaxClients)
 	{
-		g_userJumps[client][LastJumpTimes][3] = 0.0;
-		g_userJumps[client][LastJumpTimes][2] = 0.0;
-		g_userJumps[client][LastJumpTimes][1] = 0.0;
-		g_userJumps[client][LastJumpTimes][0] = 0.0;
-		
+		g_fLastJumps[client][3] = 0.0;
+		g_fLastJumps[client][2] = 0.0;
+		g_fLastJumps[client][1] = 0.0;
+		g_fLastJumps[client][0] = 0.0;
+
 		if(IsFakeClient(client))
 			return;
-		
+
 		if(GetClientTeam(client) < 2)
 			return;
-		
+
 		g_bPickedStyle[client] = false;
-		
+
 		if(g_StyleDefault == -1) Timer_LogError("PhysicsCFG: No default style found");
-		else Timer_SetStyle(client, g_StyleDefault);	
-		
+		else Timer_SetStyle(client, g_StyleDefault);
+
 		ApplyDifficulty(client);
-		
+
 		Timer_SetTrack(client, TRACK_NORMAL);
 
 		if (g_Settings[StyleMenuOnSpawn])
 		{
 			FakeClientCommand(client, "sm_style");
 		}
-		
+
 		if(g_Settings[TeleportOnSpawn])
 		{
 			FakeClientCommand(client, "sm_restart");
@@ -452,53 +449,101 @@ public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
+new Float:g_fPauseLastJumps[MAXPLAYERS+1][4];
+new Float:g_fPauseStartTime[MAXPLAYERS+1];
+
+public OnTimerPaused(client)
+{
+	StoreAntiBhop(client);
+}
+
+public OnTimerResumed(client)
+{
+	RestoreAntiBhop(client);
+}
+
+public OnClientStartTouchZoneType(client, MapZoneType:type)
+{
+	if(!Timer_GetStatus(client) && !Timer_GetPauseStatus(client)) // Timer stopped
+		if(type == ZtStart || type == ZtBonusStart || type == ZtBonus2Start || type == ZtBonus3Start || type == ZtBonus4Start || type == ZtBonus5Start)
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, Float:{0.0,0.0,-100.0});
+}
+
+public Native_SaveLastJumps(Handle:plugin, numParams)
+{
+	StoreAntiBhop(GetNativeCell(1));
+}
+
+StoreAntiBhop(client)
+{
+	g_fPauseStartTime[client] = GetGameTime();
+	
+	g_fPauseLastJumps[client][0] = g_fLastJumps[client][0];
+	g_fPauseLastJumps[client][1] = g_fLastJumps[client][1];
+	g_fPauseLastJumps[client][2] = g_fLastJumps[client][2];
+	g_fPauseLastJumps[client][3] = g_fLastJumps[client][3];
+}
+
+public Native_RestoreLastJumps(Handle:plugin, numParams)
+{
+	RestoreAntiBhop(GetNativeCell(1));
+}
+
+RestoreAntiBhop(client)
+{
+	g_fLastJumps[client][0] = g_fPauseLastJumps[client][0] + GetGameTime() - g_fPauseStartTime[client];
+	g_fLastJumps[client][1] = g_fPauseLastJumps[client][1] + GetGameTime() - g_fPauseStartTime[client];
+	g_fLastJumps[client][2] = g_fPauseLastJumps[client][2] + GetGameTime() - g_fPauseStartTime[client];
+	g_fLastJumps[client][3] = g_fPauseLastJumps[client][3] + GetGameTime() - g_fPauseStartTime[client];
+}
+
 public Action:Event_PlayerJump(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new client = GetClientOfUserId(GetEventInt(event, "userid"));
-	
+
 	new Float:time = GetGameTime();
-	
+
 	new style = Timer_GetStyle(client);
-	
+
 	g_fLastJump[client] = time;
-	
+
 	GetClientAbsOrigin(client, g_fJumpLastCord[client]);
-	
+
 	if(g_fStamina[client] != -1.0)
 	{
 		SetEntPropFloat(client, Prop_Send, "m_flStamina", g_fStamina[client]);
 	}
-	
+
 	if(g_Physics[style][StyleBoostForward] != 1.0)
 		CreateTimer(0.0, Timer_Boost, client, TIMER_FLAG_NO_MAPCHANGE);
-	
+
 	if(g_Physics[style][StyleMaxSpeed] != 0.0)
 	{
 		CreateTimer(0.05, DelayedSlowDown, client);
 	}
-	
+
 	if(g_Physics[style][StyleAntiBhop] > 0)
 	{
-		new Float:timediff = time - g_userJumps[client][LastJumpTimes][3];
-		g_userJumps[client][LastJumpTimes][3] = g_userJumps[client][LastJumpTimes][2];
-		g_userJumps[client][LastJumpTimes][2] = g_userJumps[client][LastJumpTimes][1];
-		g_userJumps[client][LastJumpTimes][1] = g_userJumps[client][LastJumpTimes][0];
-		g_userJumps[client][LastJumpTimes][0] = time;
-		
-		if (timediff <= 4.0 && g_userJumps[client][LastJumpTimes][3] != 0.0 && g_userJumps[client][LastJumpTimes][2] != 0.0)
+		new Float:timediff = time - g_fLastJumps[client][3];
+		g_fLastJumps[client][3] = g_fLastJumps[client][2];
+		g_fLastJumps[client][2] = g_fLastJumps[client][1];
+		g_fLastJumps[client][1] = g_fLastJumps[client][0];
+		g_fLastJumps[client][0] = time;
+
+		if (timediff <= 4.0 && g_fLastJumps[client][3] != 0.0 && g_fLastJumps[client][2] != 0.0)
 		{
 			// If set to 1 prevent bhop everywhere, if set to 2 use it only inside start zones
-			if(g_Physics[style][StyleAntiBhop] == 1 || Timer_IsPlayerTouchingZoneType(client, ZtStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonusStart))
+			if(!Timer_IsPlayerTouchingZoneType(client, ZtBhop) && (g_Physics[style][StyleAntiBhop] == 1 || Timer_IsPlayerTouchingStartZone(client)))
 			{
-				g_userJumps[client][LastJumpTimes][0] = 0.0;
-				g_userJumps[client][LastJumpTimes][1] = 0.0;
-				g_userJumps[client][LastJumpTimes][2] = 0.0;
-				g_userJumps[client][LastJumpTimes][3] = 0.0;
+				g_fLastJumps[client][0] = 0.0;
+				g_fLastJumps[client][1] = 0.0;
+				g_fLastJumps[client][2] = 0.0;
+				g_fLastJumps[client][3] = 0.0;
 				CreateTimer(0.05, DelayedSlowDownDefault, client);
 			}
 		}
 	}
-	
+
 	return Plugin_Continue;
 }
 
@@ -516,37 +561,40 @@ public Action:DelayedSlowDownDefault(Handle:timer, any:client)
 public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:angles[3], &weapon, &subtype, &cmdnum, &tickcount, &seed, mouse[2])
 {
 	new iInitialButtons = buttons;
-	
+
 	if(!IsPlayerAlive(client))
 		return Plugin_Continue;
-	
+
 	if(Client_IsOnLadder(client))
 		g_fLastTimeLadderUsed[client] = GetGameTime();
-	
+
 	new style = Timer_GetStyle(client);
 	new Float:fGameTime = GetGameTime();
 	new bool:abuse = false;
 	new bool:oldgroundstatus = g_bStayOnGround[client];
 	new bool:onground = bool:(GetEntityFlags(client) & FL_ONGROUND);
 	
+	if(onground && !oldgroundstatus)
+		SetEntityGravity(client, g_Physics[style][StyleGravity]);
+
 	new Float:vecVelocity[3];
 	GetEntDataVector(client, g_iOffs_Velocity, vecVelocity);
-	
+
 	new bool:GainHeight = false;
-	
+
 	if(g_fCord_Old[client][2] < g_fCord_New[client][2])
 	{
 		GainHeight = true;
 	}
-	
+
 	decl Float:fVelocity[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fVelocity); //velocity
 	new Float:currentspeed = SquareRoot(Pow(fVelocity[0],2.0)+Pow(fVelocity[1],2.0)); //player speed (units per secound)
-	
+
 	g_fSpeedTotal[client] += currentspeed;
 	g_iCommandCount[client] ++;
 	g_fSpeedCurrent[client] = currentspeed;
-	
+
 	if(currentspeed > g_fSpeedMax[client])
 	{
 		g_fSpeedMax[client] = currentspeed;
@@ -555,9 +603,9 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 	g_fCord_Old[client][0] = g_fCord_New[client][0];
 	g_fCord_Old[client][1] = g_fCord_New[client][1];
 	g_fCord_Old[client][2] = g_fCord_New[client][2];
-	
+
 	GetClientAbsOrigin(client, g_fCord_New[client]);
-	
+
 	if(g_fCord_Old[client][2] > g_fCord_New[client][2] && GainHeight)
 	{
 		Call_StartForward(g_OnClientMaxJumpHeight);
@@ -565,7 +613,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 		Call_PushCell(g_fCord_Old[client][2]-g_fJumpLastCord[client][2]);
 		Call_Finish();
 	}
-		
+
 	if(!onground && !Client_IsOnLadder(client))
 	{
 		if(!Timer_IsPlayerTouchingZoneType(client, ZtFreeStyle))
@@ -573,15 +621,15 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 			if(g_Physics[style][StyleForceHalfSideways] == 1)
 			{
 				g_iMoveCount[client] = 0;
-				
+
 				new Float:fCheck_KeyCounts = 0.25;													//time after 2 buttons have to be pressed in seconds
 				new Float:fReset_KeyHits = 3.00;													//time after keyhits are resetted in seconds
 				new iCheck_Key_hits = 5;															//max keyhits allowed within "fCheck_KeyCounts" time
-				
-				
+
+
 				new Float:fTickrate = 1.0 / GetTickInterval();										//get server tickrate
 				new Float:fCheck_KeyCounts_ticks = fCheck_KeyCounts*fTickrate;						//calculate how many ticks has to be ticked to match "fCheck_KeyCounts" time
-				
+
 				if(buttons & IN_FORWARD)
 				{
 					g_iMoveCount[client]++;															//count how many keys are pressed
@@ -595,7 +643,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					}
 					g_fCount_FORWARD[client] = 0.0;													//reset count after key is released
 				}
-				
+
 				if(buttons & IN_BACK)
 				{
 					g_iMoveCount[client]++;															//count how many keys are pressed
@@ -609,7 +657,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					}
 					g_fCount_BACK[client] = 0.0;													//reset count after key is released
 				}
-				
+
 				if(buttons & IN_MOVELEFT)
 				{
 					g_iMoveCount[client]++;															//count how many keys are pressed
@@ -623,7 +671,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					}
 					g_fCount_MOVELEFT[client] = 0.0;												//reset count after key is released
 				}
-				
+
 				if(buttons & IN_MOVERIGHT)
 				{
 					g_iMoveCount[client]++;															//count how many keys are pressed
@@ -637,11 +685,11 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					}
 					g_fCount_MOVERIGHT[client] = 0.0;												//reset count after key is released
 				}
-				
+
 				g_fCount_Keys[client] = g_fCount_FORWARD[client]+g_fCount_BACK[client]+g_fCount_MOVELEFT[client]+g_fCount_MOVERIGHT[client];			//calculate time between button presses
-				
+
 				g_iKey_hits[client] = g_iFORWARD_hits[client]+g_iBACK_hits[client]+g_iMOVELEFT_hits[client]+g_iMOVERIGHT_hits[client];					//calculate all key hits
-				
+
 				if ((g_iMoveCount[client] == 1 && (g_fCount_Keys[client] >= fCheck_KeyCounts_ticks)) || (g_iKey_hits[client] >= iCheck_Key_hits))		//punish the client and reset keyhits/keycounts
 				{
 					abuse = true;
@@ -654,7 +702,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					g_iMOVELEFT_hits[client] = 0;
 					g_iMOVERIGHT_hits[client] = 0;
 				}
-				
+
 				if (g_iMoveCount[client] == 2)														// reset keyhits/keycounts if 2 buttons are pressed
 				{
 					g_fCount_FORWARD[client] = 0.0;
@@ -666,7 +714,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					g_iMOVELEFT_hits[client] = 0;
 					g_iMOVERIGHT_hits[client] = 0;
 				}
-				
+
 				g_iKey_hits_reset[client]++;
 				if(g_iKey_hits_reset[client] > (fReset_KeyHits*fTickrate))									// reset keyhits
 				{
@@ -680,23 +728,23 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 			else if(g_Physics[style][StyleForceHalfSideways] == 2)
 			{
 				new iMoveCount = 0;
-				
+
 				if(buttons & IN_FORWARD)
 					iMoveCount++;
-				
+
 				if(buttons & IN_BACK)
 					iMoveCount++;
-				
+
 				if(buttons & IN_MOVELEFT)
 					iMoveCount++;
-					
+
 				if(buttons & IN_MOVERIGHT)
 					iMoveCount++;
-				
+
 				if (iMoveCount == 1)
 					abuse = true;
 			}
-			
+
 			if(g_Physics[style][StylePreventMoveleft])
 			{
 				if (buttons & IN_MOVELEFT || vel[1] < 0)
@@ -704,7 +752,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					abuse = true;
 				}
 			}
-			
+
 			if(g_Physics[style][StylePreventMoveright])
 			{
 				if (buttons & IN_MOVERIGHT || vel[1] > 0)
@@ -712,7 +760,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					abuse = true;
 				}
 			}
-			
+
 			if(g_Physics[style][StylePreventPlusleft])
 			{
 				if (buttons & IN_LEFT) //Can't disable
@@ -723,10 +771,10 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					}
 				}
 			}
-			
+
 			if(g_Physics[style][StylePreventPlusright])
 			{
-				if (buttons & IN_RIGHT) //Can't disable 
+				if (buttons & IN_RIGHT) //Can't disable
 				{
 					if(Timer_GetStatus(client) > 0)
 					{
@@ -734,7 +782,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					}
 				}
 			}
-			
+
 			if(g_Physics[style][StylePreventMoveforward])
 			{
 				if (buttons & IN_FORWARD || vel[0] > 0)
@@ -742,7 +790,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					abuse = true;
 				}
 			}
-			
+
 			if(g_Physics[style][StylePreventMoveback])
 			{
 				if (buttons & IN_BACK || vel[0] < 0)
@@ -750,7 +798,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					abuse = true;
 				}
 			}
-			
+
 			if(g_Physics[style][StyleBlockMovementDirection] != 0)
 			{
 				//backwards
@@ -771,7 +819,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 				}
 			}
 		}
-		
+
 		if(g_Physics[style][StylePreventPlusleft])
 		{
 			if(buttons & IN_LEFT)
@@ -779,7 +827,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 				abuse = true;
 			}
 		}
-		
+
 		if(g_Physics[style][StylePreventPlusright])
 		{
 			if(buttons & IN_RIGHT)
@@ -787,7 +835,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 				abuse = true;
 			}
 		}
-		
+
 		if(g_Physics[style][StyleHoverScale] != 0.0)
 		{
 			if(fVelocity[2] < 0.0)
@@ -799,19 +847,19 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 			}
 		}
 	}
-	
+
 	// Freestyle for players which touched a ladder before
 	if(g_Physics[style][StyleLadderFreestyleCooldown] > 0.0 && GetGameTime() - g_fLastTimeLadderUsed[client] < g_Physics[style][StyleLadderFreestyleCooldown])
 	{
 		abuse = false;
 	}
-	
+
 	if(abuse)
 	{
 		PunishAbuse(client);
 		g_fUnblockControl[client] = fGameTime+g_Physics[style][StylePunishMovementControlCooldown];
 	}
-	else if(g_timerMapzones) 
+	else if(g_timerMapzones)
 	{
 		if(!Timer_IsPlayerTouchingZoneType(client, ZtPushEast)
 			&& !Timer_IsPlayerTouchingZoneType(client, ZtPushWest)
@@ -826,11 +874,11 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 	{
 		Block_MovementControl(client, true);
 	}
-	
+
 	if (buttons & IN_JUMP)
 	{
 		new bool:boost = false;
-		
+
 		if(g_timerMapzones)
 		{
 			if(!Timer_IsPlayerTouchingZoneType(client, ZtNoBoost))
@@ -839,17 +887,17 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 			}
 		}
 		else boost = true;
-		
+
 		if(boost && onground && g_fBoost[client] > 0.0)
 		{
 			g_bPushWait[client] = true;
 			CreateTimer(0.0, Timer_Push, client, TIMER_FLAG_NO_MAPCHANGE);
 		}
-		
+
 		if(!onground)
 		{
 			new auto = false;
-			
+
 			if(g_timerMapzones)
 			{
 				//Settings/Zone check
@@ -859,7 +907,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 				}
 			}
 			else auto = true;
-			
+
 			if(auto)
 			{
 				//Ladder check
@@ -883,7 +931,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 
 	new oldjumps = g_iFullJumpCount[client];
 	new bool:perfect = false;
-		
+
 	// Ignore this jump if the player is in a tight space or stuck in the ground.
 	if ((buttons & IN_JUMP) && !abuse)
 	{
@@ -899,41 +947,36 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 					g_iFullJumpCount[client]++;
 					g_fJumpAccuracy[client] = 100-((100/g_Settings[MultiBhopDelay])*g_fFullJumpTimeAmount[client])/g_iFullJumpCount[client];
 				}
-				else
-				{
-					fCheckTime[client] = fGameTime + g_Settings[MultiBhopJumpTime];
-				}	
+				else fCheckTime[client] = fGameTime + g_Settings[MultiBhopJumpTime];
 			}
 			else if(fCheckTime[client] != 0.0)
-			{
 				fCheckTime[client] = 0.0;
-			}
 		}
 	}
-	
+
 	if(!abuse && !perfect)
 	{
 		//Save new on ground status
-		if(onground) 
+		if(onground)
 		{
-			if(!g_bStayOnGround[client] && g_fBoost[client] > 0.0) 
+			if(!g_bStayOnGround[client] && g_fBoost[client] > 0.0)
 			{
 				g_bPushWait[client] = false;
 			}
-			
+
 			g_bStayOnGround[client] = true;
 		}
 		else
 		{
 			g_bStayOnGround[client] = false;
 		}
-		
+
 		//Player landed
 		if(g_bStayOnGround[client] && g_bStayOnGround[client] != oldgroundstatus)
 		{
 			g_fLandedTime[client] = fGameTime;
 		}
-		
+
 		//Player jumped
 		if(!g_bStayOnGround[client] && g_bStayOnGround[client] != oldgroundstatus)
 		{
@@ -942,11 +985,11 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 				g_iFullJumpCount[client]++;
 			}
 		}
-		
+
 		//Player has jumped? How good was his jump?
 		if(oldjumps < g_iFullJumpCount[client]) //don't count first jump
 		{
-			if(fGameTime-g_fLandedTime[client] > g_Settings[MultiBhopDelay]) 
+			if(fGameTime-g_fLandedTime[client] > g_Settings[MultiBhopDelay])
 			{
 				g_fFullJumpTimeAmount[client] += g_Settings[MultiBhopDelay];
 			}
@@ -954,17 +997,17 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
 			{
 				g_fFullJumpTimeAmount[client] += fGameTime-g_fLandedTime[client];
 			}
-			
+
 			//update jump accuracy
 			g_fJumpAccuracy[client] = 100-((100/g_Settings[MultiBhopDelay])*g_fFullJumpTimeAmount[client])/g_iFullJumpCount[client];
 		}
 	}
-	
+
 	iPrevButtons[client] = buttons;
-	
+
 	if(iInitialButtons != buttons)
 		return Plugin_Changed;
-    
+
 	return Plugin_Continue;
 }
 
@@ -984,31 +1027,31 @@ CreatePhysicsMenu(client, MCategory:category)
 		if(category == MCategory_Ranked) SetMenuTitle(menu, "Ranked Styles", client);
 		else if(category == MCategory_Fun) SetMenuTitle(menu, "Fun Styles", client);
 		else if(category == MCategory_Practise) SetMenuTitle(menu, "Practise Styles", client);
-		
+
 		SetMenuExitBackButton(menu, true);
 		SetMenuExitButton(menu, true);
-		
+
 		new count = 0;
 		new found = 0;
-		
+
 		new maxorder[3] = {0, ...};
 
-		for (new i = 0; i < MAX_STYLES-1; i++) 
+		for (new i = 0; i < MAX_STYLES-1; i++)
 		{
 			if(!g_Physics[i][StyleEnable])
 				continue;
 			if(g_Physics[i][StyleCategory] != category)
 				continue;
-			
+
 			if(g_Physics[i][StyleOrder] > maxorder[category])
 				maxorder[category] = g_Physics[i][StyleOrder];
-			
+
 			count++;
 		}
-		
-		for (new order = 0; order <= maxorder[category]; order++) 
+
+		for (new order = 0; order <= maxorder[category]; order++)
 		{
-			for (new i = 0; i < MAX_STYLES-1; i++) 
+			for (new i = 0; i < MAX_STYLES-1; i++)
 			{
 				if(!g_Physics[i][StyleEnable])
 					continue;
@@ -1016,15 +1059,15 @@ CreatePhysicsMenu(client, MCategory:category)
 					continue;
 				if(g_Physics[i][StyleOrder] != order)
 					continue;
-				
+
 				found++;
-				
+
 				new String:buffer[8];
 				IntToString(i, buffer, sizeof(buffer));
-				
+
 				AddMenuItem(menu, buffer, g_Physics[i][StyleName]);
 			}
-			
+
 			if(found == count)
 				break;
 		}
@@ -1035,17 +1078,16 @@ CreatePhysicsMenu(client, MCategory:category)
 
 public MenuHandler_Physics(Handle:menu, MenuAction:action, client, itemNum)
 {
-	if (action == MenuAction_End) 
+	if (action == MenuAction_End)
 	{
 		CloseHandle(menu);
 	}
-	else if (action == MenuAction_Cancel) 
+	else if (action == MenuAction_Cancel)
 	{
-		if (itemNum == MenuCancel_ExitBack) 
-		{
-			if(IsClientInGame(client)) FakeClientCommand(client, "sm_style");
-		}
-	} 
+		if (itemNum == MenuCancel_ExitBack)
+			if(IsClientInGame(client))
+				FakeClientCommand(client, "sm_style");
+	}
 	else if ( action == MenuAction_Select )
 	{
 		decl String:info[100], String:info2[100];
@@ -1053,29 +1095,26 @@ public MenuHandler_Physics(Handle:menu, MenuAction:action, client, itemNum)
 		if(found)
 		{
 			new style = StringToInt(info);
-			
+
 			if(0 <= style < MAX_STYLES-1 && g_Physics[style][StyleEnable])
 			{
 				if((g_iBhopButtonCount == 0 && g_iBhopDoorCount == 0) && g_Physics[style][StyleMultiBhop] > 0)
 				{
 					CPrintToChat(client, PLUGIN_PREFIX, "Multi bhop not available", client);
-					if(IsClientInGame(client)) FakeClientCommand(client, "sm_style");
+					if(IsClientInGame(client))
+						FakeClientCommand(client, "sm_style");
 				}
 				else
 				{
 					g_bPickedStyle[client] = true;
 					Timer_SetStyle(client, style);
-					
+
 					if(g_Physics[style][StyleCustom])
-					{
 						CreateCustomMenu(client);
-					}
 				}
 			}
-			else
-			{
-				if(IsClientInGame(client)) FakeClientCommand(client, "sm_style");
-			}
+			else if(IsClientInGame(client))
+				FakeClientCommand(client, "sm_style");
 		}
 	}
 }
@@ -1097,7 +1136,7 @@ CreateDifficultyMenu(client)
 
 				SetMenuTitle(menu, "Styles", client);
 				SetMenuExitButton(menu, true);
-				
+
 				if(g_StyleCountRankedEnabled > 0)
 				{
 					AddMenuItem(menu, "timed", "Ranked Styles");
@@ -1110,9 +1149,9 @@ CreateDifficultyMenu(client)
 				{
 					AddMenuItem(menu, "practise", "Practise Styles");
 				}
-				
+
 				AddMenuItem(menu, "main", "Back");
-				
+
 				DisplayMenu(menu, client, MENU_TIME_FOREVER);
 			}
 		}
@@ -1122,7 +1161,7 @@ CreateDifficultyMenu(client)
 
 public MenuHandler_Difficulty(Handle:menu, MenuAction:action, client, itemNum)
 {
-	if (action == MenuAction_End) 
+	if (action == MenuAction_End)
 	{
 		CloseHandle(menu);
 	}
@@ -1154,11 +1193,13 @@ public MenuHandler_Difficulty(Handle:menu, MenuAction:action, client, itemNum)
 			}
 			else if(StrEqual(info, "main"))
 			{
-				if(IsClientInGame(client)) FakeClientCommand(client, "sm_menu");
+				if(IsClientInGame(client))
+					FakeClientCommand(client, "sm_menu");
 			}
 			else
 			{
-				if(IsClientInGame(client)) FakeClientCommand(client, "sm_style");
+				if(IsClientInGame(client))
+					FakeClientCommand(client, "sm_style");
 			}
 		}
 	}
@@ -1191,17 +1232,13 @@ public MenuHandler_Settings(Handle:menu, MenuAction:action, client, itemNum)
 {
 	if(0 < client < MaxClients)
 	{
-		if (action == MenuAction_End) 
+		if (action == MenuAction_End)
 		{
 			if(IsClientConnected(client)) FakeClientCommand(client, "sm_style");
 		}
 		else if ( action == MenuAction_Select )
 		{
-			if(GetClientTeam(client) < 2)
-			{
-				
-			}
-			else
+			if(GetClientTeam(client) >= 2)
 			{
 				decl String:info[100], String:info2[100];
 				new bool:found = GetMenuItem(menu, itemNum, info, sizeof(info), _, info2, sizeof(info2));
@@ -1239,9 +1276,9 @@ public MenuHandler_Settings(Handle:menu, MenuAction:action, client, itemNum)
 					{
 						g_bCustomLowGravity[client] = false;
 					}
-					
+
 					CreateSettingsMenu(client);
-					
+
 					ApplyDifficulty(client);
 				}
 			}
@@ -1262,13 +1299,13 @@ CreateCustomMenu(client)
 
 	if(!g_bCustomAuto[client]) AddMenuItem(menu, "enable_auto", "Enable Auto-Mode");
 	else  AddMenuItem(menu, "disable_auto", "Disable Auto-Mode");
-	
+
 	if(!g_bCustomBoost[client]) AddMenuItem(menu, "enable_boost", "Enable Jump Height Boost");
 	else  AddMenuItem(menu, "disable_boost", "Disable Jump Height Boost");
-	
+
 	if(!g_bCustomFullStamina[client]) AddMenuItem(menu, "enable_stamina", "Enable Speed Loss (Stamina)");
 	else  AddMenuItem(menu, "disable_stamina", "Disable Speed Loss (Stamina)");
-	
+
 	if(!g_bCustomLowGravity[client]) AddMenuItem(menu, "enable_lowgravity", "Enable Low Gravity");
 	else  AddMenuItem(menu, "disable_lowgravity", "Disable Low Gravity");
 
@@ -1279,7 +1316,7 @@ public MenuHandler_Custom(Handle:menu, MenuAction:action, client, itemNum)
 {
 	if(0 < client < MaxClients)
 	{
-		if (action == MenuAction_End) 
+		if (action == MenuAction_End)
 		{
 			if(IsClientConnected(client)) FakeClientCommand(client, "sm_bhop");
 		}
@@ -1287,7 +1324,7 @@ public MenuHandler_Custom(Handle:menu, MenuAction:action, client, itemNum)
 		{
 			if(GetClientTeam(client) < 2)
 			{
-				
+
 			}
 			else
 			{
@@ -1327,9 +1364,9 @@ public MenuHandler_Custom(Handle:menu, MenuAction:action, client, itemNum)
 					{
 						g_bCustomLowGravity[client] = false;
 					}
-					
+
 					CreateCustomMenu(client);
-					
+
 					ApplyDifficulty(client);
 				}
 			}
@@ -1346,23 +1383,23 @@ ApplyDifficulty(client)
 	if (IsClientInGame(client) && IsClientConnected(client) && !IsClientSourceTV(client))
 	{
 		new style = Timer_GetStyle(client);
-		
+
 		Call_StartForward(g_OnClientApplyDifficultyPre);
 		Call_PushCell(client);
 		Call_PushCell(style);
 		Call_Finish();
-		
+
 		// Get style again for the case it was changed on the forward
 		style = Timer_GetStyle(client);
-		
+
 		if(g_Physics[style][StyleCustom])
 		{
 			if(g_bCustomFullStamina[client]) g_fStamina[client] = STAMINA_FULL;
 			else  g_fStamina[client] = STAMINA_DISABLED;
-			
+
 			if(g_bCustomBoost[client]) g_fBoost[client] = g_Physics[style][StyleBoost];
 			else  g_fBoost[client] = 0.0;
-			
+
 			g_bAuto[client] = g_bCustomAuto[client];
 		}
 		else
@@ -1371,49 +1408,43 @@ ApplyDifficulty(client)
 			g_bAuto[client] = g_Physics[style][StyleAuto];
 			g_fBoost[client] = g_Physics[style][StyleBoost];
 		}
-		
+
 		//only allow on normal
 		if(!g_Physics[style][StyleLJStats] && g_timerLjStats)
 		{
 			SetLJMode(client, false);
 		}
-		
+
 		//stop timer
 		Timer_Stop(client);
-		
+
 		SetEntityGravity(client, g_Physics[style][StyleGravity]);
-		
+
 		//stop him
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, Float:{0.0,0.0,-100.0});
-		
+
 		SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", g_Physics[style][StyleTimeScale]);
-		
+
 		SetEntProp(client, Prop_Send, "m_iFOV", g_Physics[style][StyleFOV]);
 		SetEntProp(client, Prop_Send, "m_iDefaultFOV", g_Physics[style][StyleFOV]);
-		
+
 		decl String:auth[32];
 		#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
 			GetClientAuthId(client, AuthId_Steam2, auth, sizeof(auth));
 		#else
 			GetClientAuthString(client, auth, sizeof(auth));
 		#endif
-		
-		if(StrEqual(g_Physics[style][StyleDesc], ""))
-		{
-			
-		}
-		else
-		{
+
+		if(!StrEqual(g_Physics[style][StyleDesc], ""))
 			CPrintToChat(client, "%s %s", PLUGIN_PREFIX2, g_Physics[style][StyleDesc]);
-		}
-		
+
 		if(g_Settings[TeleportOnStyleChanged])
 		{
 			if(Timer_GetTrack(client) == TRACK_BONUS)
 				FakeClientCommand(client, "sm_b");
 			else FakeClientCommand(client, "sm_start");
 		}
-		
+
 		Call_StartForward(g_OnClientApplyDifficulty);
 		Call_PushCell(client);
 		Call_PushCell(style);
@@ -1444,10 +1475,10 @@ public Native_GetMaxSpeed(Handle:plugin, numParams)
 public Native_GetAvgSpeed(Handle:plugin, numParams)
 {
 	new client = GetNativeCell(1);
-	
+
 	if(g_iCommandCount[client] <= 0)
 		return false;
-	
+
 	SetNativeCellRef(2, g_fSpeedTotal[client]/g_iCommandCount[client]);
 	return true;
 }
@@ -1469,43 +1500,27 @@ public Native_ResetAccuracy(Handle:plugin, numParams)
 	g_iFullJumpCount[client] = 0;
 }
 
-stock SetThirdPersonView(client, bool:third)
-{
-	if(third)
-	{
-		SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", 0); 
-		SetEntProp(client, Prop_Send, "m_iObserverMode", 1);
-		SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 0);
-	}
-	else if(!third)
-	{
-		SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", -1);
-		SetEntProp(client, Prop_Send, "m_iObserverMode", 0);
-		SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 1);
-	}
-}
-
-public Entity_Touch(bhop,client) 
+public Entity_Touch(bhop,client)
 {
 	new doorID = GetBhopDoorID(bhop);
 	new buttonID = GetBhopButtonID(bhop);
-	
+
 	//bhop = entity
-	if(0 < client <= MaxClients) 
+	if(0 < client <= MaxClients)
 	{
 		new style = Timer_GetStyle(client);
-		
+
 		if(g_Settings[VegasEnable])
 		{
 			new bool:avoid;
-			
+
 			if(doorID != -1 && g_bBhopDoorAvoid[doorID])
 			{
 				if(!g_bBhopDoorClientAvoid[doorID][client])
 				{
 					g_bBhopDoorClientAvoid[doorID][client] = true;
 					avoid = true;
-					if(g_iBhopClientAvoid[client] == 1) 
+					if(g_iBhopClientAvoid[client] == 1)
 						CPrintToChat(client, PLUGIN_PREFIX, "You failed vegas mission", client);
 				}
 			}
@@ -1515,20 +1530,20 @@ public Entity_Touch(bhop,client)
 				{
 					g_bBhopButtonClientAvoid[buttonID][client] = true;
 					avoid = true;
-					if(g_iBhopClientAvoid[client] == 1) 
+					if(g_iBhopClientAvoid[client] == 1)
 						CPrintToChat(client, PLUGIN_PREFIX, "You failed vegas mission", client);
 				}
 			}
-			
+
 			if(avoid)
 			{
 				g_iBhopClientAvoid[client]++;
-				
+
 				ResetBhopCollect(client);
 			}
-			
+
 			new bool:collect;
-			
+
 			if(doorID != -1  && g_bBhopDoorCollect[doorID])
 			{
 				if(!g_bBhopDoorClientCollect[doorID][client])
@@ -1545,27 +1560,27 @@ public Entity_Touch(bhop,client)
 					collect = true;
 				}
 			}
-			
+
 			if(collect)
 			{
 				g_iBhopClientCollect[client]++;
-				
+
 				if(GetBhopCollectComplete(client))
 				{
 					g_iVegasWinCount++;
-					
+
 					if(g_timerRankings)
 					{
 						Timer_AddPoints(client, g_Settings[PointsVegas]+(g_Settings[PointsVegasAdd]*g_iVegasWinCount));
 						Timer_SavePoints(client);
-						
+
 						decl String:sName[32];
 						GetClientName(client, sName, sizeof(sName));
 						CPrintToChatAll(PLUGIN_PREFIX, "Vegas won", sName, g_Settings[PointsVegasAdd]*g_iVegasWinCount);
 						AlterBhopBlocks(true);
 						AlterBhopBlocks(false);
 					}
-				
+
 					if(g_iVegasWinCount >= g_Settings[VegasMapMaxGames])
 					{
 						CPrintToChatAll(PLUGIN_PREFIX, "Vegas final game");
@@ -1577,27 +1592,27 @@ public Entity_Touch(bhop,client)
 				}
 			}
 		}
-		
+
 		static Float:flPunishTime[MAXPLAYERS + 1], iLastBlock[MAXPLAYERS + 1] = { -1,... };
-		
+
 		new Float:time = GetGameTime();
-		
+
 		new Float:diff = time - flPunishTime[client];
-		
+
 		if ((GetUserFlagBits(client) & ADMFLAG_RESERVATION) && g_colourme[client])
 		{
 			SetEntDataArray(bhop, g_iOffs_clrRender , g_PlattformColorPlayer[client], 4, 1, true);
 			CreateTimer(0.5, RemoveColouredBlocks,bhop);
 		}
-		
-		if(iLastBlock[client] != bhop || diff > g_Settings[MultiBhopCooldown]) 
+
+		if(iLastBlock[client] != bhop || diff > g_Settings[MultiBhopCooldown])
 		{
 			//reset cooldown
 			iLastBlock[client] = bhop;
 			flPunishTime[client] = time + g_Settings[MultiBhopDelay];
-			
+
 		}
-		else if(diff > g_Settings[MultiBhopDelay]) 
+		else if(diff > g_Settings[MultiBhopDelay])
 		{
 			if(g_Physics[style][StyleMultiBhop] == 1 && time - g_fLastJump[client] > (g_Settings[MultiBhopCooldown] + g_Settings[MultiBhopDelay]))
 			{
@@ -1619,16 +1634,16 @@ public Action:RemoveColouredBlocks(Handle:timer, any:bhop)
 	SetEntDataArray(bhop, g_iOffs_clrRender , colour, 4, 1, true);
 }
 
-FindBhopBlocks() 
+FindBhopBlocks()
 {
 	if(g_Settings[MultiBhopEnable])
 	{
 		decl Float:startpos[3], Float:endpos[3], Float:mins[3], Float:maxs[3], tele;
 		new ent = -1;
 
-		while((ent = FindEntityByClassname(ent,"func_door")) != -1) 
+		while((ent = FindEntityByClassname(ent,"func_door")) != -1)
 		{
-			if(g_iDoorOffs_vecPosition1 == -1) 
+			if(g_iDoorOffs_vecPosition1 == -1)
 			{
 				g_iDoorOffs_vecPosition1 = FindDataMapOffs(ent,"m_vecPosition1");
 				g_iDoorOffs_vecPosition2 = FindDataMapOffs(ent,"m_vecPosition2");
@@ -1642,7 +1657,7 @@ FindBhopBlocks()
 			GetEntDataVector(ent,g_iDoorOffs_vecPosition1,startpos);
 			GetEntDataVector(ent,g_iDoorOffs_vecPosition2,endpos);
 
-			if(startpos[2] > endpos[2]) 
+			if(startpos[2] > endpos[2])
 			{
 				GetEntDataVector(ent,g_iOffs_vecMins,mins);
 				GetEntDataVector(ent,g_iOffs_vecMaxs,maxs);
@@ -1651,12 +1666,12 @@ FindBhopBlocks()
 				startpos[1] += (mins[1] + maxs[1]) * 0.5;
 				startpos[2] += maxs[2];
 
-				if((tele = CustomTraceForTeleports(startpos,endpos[2] + maxs[2])) != -1) 
+				if((tele = CustomTraceForTeleports(startpos,endpos[2] + maxs[2])) != -1)
 				{
 					g_iBhopDoorList[g_iBhopDoorCount] = ent;
 					g_iBhopDoorTeleList[g_iBhopDoorCount] = tele;
 
-					if(++g_iBhopDoorCount == sizeof g_iBhopDoorList) 
+					if(++g_iBhopDoorCount == sizeof g_iBhopDoorList)
 					{
 						break;
 					}
@@ -1666,9 +1681,9 @@ FindBhopBlocks()
 
 		ent = -1;
 
-		while((ent = FindEntityByClassname(ent,"func_button")) != -1) 
+		while((ent = FindEntityByClassname(ent,"func_button")) != -1)
 		{
-			if(g_iButtonOffs_vecPosition1 == -1) 
+			if(g_iButtonOffs_vecPosition1 == -1)
 			{
 				g_iButtonOffs_vecPosition1 = FindDataMapOffs(ent,"m_vecPosition1");
 				g_iButtonOffs_vecPosition2 = FindDataMapOffs(ent,"m_vecPosition2");
@@ -1679,7 +1694,7 @@ FindBhopBlocks()
 			GetEntDataVector(ent,g_iButtonOffs_vecPosition1,startpos);
 			GetEntDataVector(ent,g_iButtonOffs_vecPosition2,endpos);
 
-			if(startpos[2] > endpos[2] && (GetEntData(ent,g_iButtonOffs_spawnflags,4) & SF_BUTTON_TOUCH_ACTIVATES)) 
+			if(startpos[2] > endpos[2] && (GetEntData(ent,g_iButtonOffs_spawnflags,4) & SF_BUTTON_TOUCH_ACTIVATES))
 			{
 				GetEntDataVector(ent,g_iOffs_vecMins,mins);
 				GetEntDataVector(ent,g_iOffs_vecMaxs,maxs);
@@ -1688,12 +1703,12 @@ FindBhopBlocks()
 				startpos[1] += (mins[1] + maxs[1]) * 0.5;
 				startpos[2] += maxs[2];
 
-				if((tele = CustomTraceForTeleports(startpos,endpos[2] + maxs[2])) != -1) 
+				if((tele = CustomTraceForTeleports(startpos,endpos[2] + maxs[2])) != -1)
 				{
 					g_iBhopButtonList[g_iBhopButtonCount] = ent;
 					g_iBhopButtonTeleList[g_iBhopButtonCount] = tele;
 
-					if(++g_iBhopButtonCount == sizeof g_iBhopButtonList) 
+					if(++g_iBhopButtonCount == sizeof g_iBhopButtonList)
 					{
 						break;
 					}
@@ -1706,77 +1721,77 @@ FindBhopBlocks()
 
 stock GetBhopDoorID(entity)
 {
-	for (new i = 0; i < g_iBhopDoorCount; i++) 
+	for (new i = 0; i < g_iBhopDoorCount; i++)
 	{
 		if(entity == g_iBhopDoorList[i])
 			return i;
 	}
-	
+
 	return -1;
 }
 
 stock GetBhopButtonID(entity)
 {
-	for (new i = 0; i < g_iBhopButtonCount; i++) 
+	for (new i = 0; i < g_iBhopButtonCount; i++)
 	{
 		if(entity == g_iBhopButtonList[i])
 			return i;
 	}
-	
+
 	return -1;
 }
 
 stock bool:GetBhopAvoidComplete(client)
 {
-	for (new i = 0; i < g_iBhopDoorCount; i++) 
+	for (new i = 0; i < g_iBhopDoorCount; i++)
 	{
 		if(!g_bBhopDoorAvoid[i])
 			continue;
-		
+
 		if(g_bBhopDoorClientAvoid[i][client])
 			return false;
 	}
-	
-	for (new i = 0; i < g_iBhopButtonCount; i++) 
+
+	for (new i = 0; i < g_iBhopButtonCount; i++)
 	{
 		if(!g_bBhopButtonAvoid[i])
 			continue;
-		
+
 		if(g_bBhopButtonClientAvoid[i][client])
 			return false;
 	}
-	
+
 	return true;
 }
 
 stock bool:GetBhopCollectComplete(client)
 {
-	for (new i = 0; i < g_iBhopDoorCount; i++) 
+	for (new i = 0; i < g_iBhopDoorCount; i++)
 	{
 		if(!g_bBhopDoorCollect[i])
 			continue;
-		
+
 		if(!g_bBhopDoorClientCollect[i][client])
 			return false;
 	}
-	
-	for (new i = 0; i < g_iBhopButtonCount; i++) 
+
+	for (new i = 0; i < g_iBhopButtonCount; i++)
 	{
 		if(!g_bBhopButtonCollect[i])
 			continue;
-		
+
 		if(!g_bBhopButtonClientCollect[i][client])
 			return false;
 	}
-	
+
 	return true;
 }
 
 stock ResetBhopAvoid(client)
 {
 	g_iBhopClientAvoid[client] = 0;
-	
-	for (new i = 0; i < g_iBhopDoorCount; i++) 
+
+	for (new i = 0; i < g_iBhopDoorCount; i++)
 	{
 		g_bBhopDoorClientAvoid[i][client] = false;
 		g_bBhopButtonClientAvoid[i][client] = false;
@@ -1786,15 +1801,15 @@ stock ResetBhopAvoid(client)
 stock ResetBhopCollect(client)
 {
 	g_iBhopClientCollect[client] = 0;
-	
-	for (new i = 0; i < g_iBhopDoorCount; i++) 
+
+	for (new i = 0; i < g_iBhopDoorCount; i++)
 	{
 		g_bBhopDoorClientCollect[i][client] = false;
 		g_bBhopButtonClientCollect[i][client] = false;
 	}
 }
 
-AlterBhopBlocks(bool:bRevertChanges) 
+AlterBhopBlocks(bool:bRevertChanges)
 {
 	if(g_Settings[MultiBhopEnable])
 	{
@@ -1809,12 +1824,12 @@ AlterBhopBlocks(bool:bRevertChanges)
 
 		decl ent, i;
 
-		if(bRevertChanges) 
+		if(bRevertChanges)
 		{
 			g_iBhopCollectMax = 0;
 			g_iBhopAvoidMax = 0;
-			
-			for (i = 0; i < g_iBhopDoorCount; i++) 
+
+			for (i = 0; i < g_iBhopDoorCount; i++)
 			{
 				ent = g_iBhopDoorList[i];
 				g_bBhopDoorAvoid[i] = false;
@@ -1825,15 +1840,15 @@ AlterBhopBlocks(bool:bRevertChanges)
 					g_bBhopDoorClientAvoid[i][client] = false;
 					g_bBhopDoorClientCollect[i][client] = false;
 				}
-				
-				if(IsValidEntity(ent)) 
+
+				if(IsValidEntity(ent))
 				{
 					SetEntDataArray(ent, g_iOffs_clrRender , {255, 255, 255, 255}, 4, 1, true);
 					SetEntDataVector(ent,g_iDoorOffs_vecPosition2,vecDoorPosition2[i]);
 					SetEntDataFloat(ent,g_iDoorOffs_flSpeed,flDoorSpeed[i]);
 					SetEntData(ent,g_iDoorOffs_spawnflags,iDoorSpawnflags[i],4);
-					
-					if(!bDoorLocked[i]) 
+
+					if(!bDoorLocked[i])
 					{
 						AcceptEntityInput(ent,"Unlock");
 					}
@@ -1842,10 +1857,10 @@ AlterBhopBlocks(bool:bRevertChanges)
 				}
 			}
 
-			for (i = 0; i < g_iBhopButtonCount; i++) 
+			for (i = 0; i < g_iBhopButtonCount; i++)
 			{
 				ent = g_iBhopButtonList[i];
-				
+
 				g_bBhopButtonAvoid[i] = false;
 				g_bBhopButtonCollect[i] = false;
 
@@ -1854,8 +1869,8 @@ AlterBhopBlocks(bool:bRevertChanges)
 					g_bBhopButtonClientAvoid[i][client] = false;
 					g_bBhopButtonClientCollect[i][client] = false;
 				}
-				
-				if(IsValidEntity(ent)) 
+
+				if(IsValidEntity(ent))
 				{
 					SetEntDataArray(ent, g_iOffs_clrRender , {255, 255, 255, 255}, 4, 1, true);
 					SetEntDataVector(ent,g_iButtonOffs_vecPosition2,vecButtonPosition2[i]);
@@ -1866,30 +1881,30 @@ AlterBhopBlocks(bool:bRevertChanges)
 				}
 			}
 		}
-		else 
+		else
 		{
 			g_iBhopCollectMax = 0;
 			g_iBhopAvoidMax = 0;
-			
+
 			g_PlattformColorAvoid[0] = 255;
 			g_PlattformColorAvoid[1] = 0;
 			g_PlattformColorAvoid[2] = 0;
 			g_PlattformColorAvoid[3] = 255;
-			
+
 			g_PlattformColorCollect[0] = 0;
 			g_PlattformColorCollect[1] = 255;
 			g_PlattformColorCollect[2] = 0;
 			g_PlattformColorCollect[3] = 255;
-			
+
 			new Float:random;
-			
+
 			//note: This only gets called directly after finding the blocks, so the entities are valid.
 			decl Float:startpos[3];
 
-			for (i = 0; i < g_iBhopDoorCount; i++) 
+			for (i = 0; i < g_iBhopDoorCount; i++)
 			{
 				ent = g_iBhopDoorList[i];
-				
+
 				if(g_Settings[VegasEnable] && g_Settings[VegasMinPlattfors] <= g_iBhopDoorCount+g_iBhopButtonCount && (g_iVegasWinCount < g_Settings[VegasMapMaxGames] || g_Settings[VegasMapMaxGames] == 0))
 				{
 					for (new client = 1; client <= MaxClients; client++)
@@ -1901,23 +1916,23 @@ AlterBhopBlocks(bool:bRevertChanges)
 					}
 
 					random = GetRandomFloat(0.0, 100.0);
-					
+
 					new Float:avoidchance = g_Settings[VegasAvoidChance]+(g_Settings[VegasAvoidChanceAdd]*g_iVegasWinCount);
-					
-					if(random < avoidchance) 
+
+					if(random < avoidchance)
 					{
 						g_bBhopDoorAvoid[i] = true;
 						g_iBhopAvoidMax++;
 						SetEntDataArray(ent, g_iOffs_clrRender , g_PlattformColorAvoid, 4, 1, true);
 					}
-					else if(random < avoidchance+g_Settings[VegasCollectChance]+(g_Settings[VegasCollectChanceAdd]*g_iVegasWinCount)) 
+					else if(random < avoidchance+g_Settings[VegasCollectChance]+(g_Settings[VegasCollectChanceAdd]*g_iVegasWinCount))
 					{
 						g_bBhopDoorCollect[i] = true;
 						g_iBhopCollectMax++;
 						SetEntDataArray(ent, g_iOffs_clrRender , g_PlattformColorCollect, 4, 1, true);
 					}
 				}
-					
+
 				GetEntDataVector(ent,g_iDoorOffs_vecPosition2,vecDoorPosition2[i]);
 				flDoorSpeed[i] = GetEntDataFloat(ent,g_iDoorOffs_flSpeed);
 				iDoorSpawnflags[i] = GetEntData(ent,g_iDoorOffs_spawnflags,4);
@@ -1935,7 +1950,7 @@ AlterBhopBlocks(bool:bRevertChanges)
 				SDKHook(ent,SDKHook_Touch,Entity_Touch);
 			}
 
-			for (i = 0; i < g_iBhopButtonCount; i++) 
+			for (i = 0; i < g_iBhopButtonCount; i++)
 			{
 				ent = g_iBhopButtonList[i];
 
@@ -1950,14 +1965,14 @@ AlterBhopBlocks(bool:bRevertChanges)
 					}
 
 					random = GetRandomFloat(0.0, 100.0);
-					
-					if(random < g_Settings[VegasAvoidChance]) 
+
+					if(random < g_Settings[VegasAvoidChance])
 					{
 						SetEntDataArray(ent, g_iOffs_clrRender , g_PlattformColorAvoid, 4, 1, true);
 						g_iBhopAvoidMax++;
 						g_bBhopButtonAvoid[i] = true;
 					}
-					else if(random < g_Settings[VegasCollectChance]+g_Settings[VegasAvoidChance]) 
+					else if(random < g_Settings[VegasCollectChance]+g_Settings[VegasAvoidChance])
 					{
 						SetEntDataArray(ent, g_iOffs_clrRender , g_PlattformColorCollect, 4, 1, true);
 						g_iBhopCollectMax++;
@@ -1981,12 +1996,12 @@ AlterBhopBlocks(bool:bRevertChanges)
 	}
 }
 
-CustomTraceForTeleports(const Float:startpos[3],Float:endheight,Float:step=1.0) 
+CustomTraceForTeleports(const Float:startpos[3],Float:endheight,Float:step=1.0)
 {
 	decl teleports[512];
 	new tpcount, ent = -1;
 
-	while((ent = FindEntityByClassname(ent,"trigger_teleport")) != -1 && tpcount != sizeof teleports) 
+	while((ent = FindEntityByClassname(ent,"trigger_teleport")) != -1 && tpcount != sizeof teleports)
 	{
 		teleports[tpcount++] = ent;
 	}
@@ -1997,13 +2012,14 @@ CustomTraceForTeleports(const Float:startpos[3],Float:endheight,Float:step=1.0)
 	origin[1] = startpos[1];
 	origin[2] = startpos[2];
 
-	do {
-		for (i = 0; i < tpcount; i++) 
+	do
+	{
+		for (i = 0; i < tpcount; i++)
 		{
 			ent = teleports[i];
 			GetAbsBoundingBox(ent,mins,maxs);
 
-			if(mins[0] <= origin[0] <= maxs[0] && mins[1] <= origin[1] <= maxs[1] && mins[2] <= origin[2] <= maxs[2]) 
+			if(mins[0] <= origin[0] <= maxs[0] && mins[1] <= origin[1] <= maxs[1] && mins[2] <= origin[2] <= maxs[2])
 			{
 				return ent;
 			}
@@ -2015,7 +2031,7 @@ CustomTraceForTeleports(const Float:startpos[3],Float:endheight,Float:step=1.0)
 	return -1;
 }
 
-GetAbsBoundingBox(ent,Float:mins[3],Float:maxs[3]) 
+GetAbsBoundingBox(ent,Float:mins[3],Float:maxs[3])
 {
 	decl Float:origin[3];
 
@@ -2040,11 +2056,11 @@ public Action:Timer_UpdateGravity(Handle:timer)
 		{
 			if(IsClientConnected(client) && IsClientSourceTV(client))
 				continue;
-			
+
 			if(g_timerMapzones)
-			if(Timer_IsPlayerTouchingZoneType(client, ZtNoGravityOverwrite)) 
+			if(Timer_IsPlayerTouchingZoneType(client, ZtNoGravityOverwrite))
 				continue;
-			
+
 			//gravity update
 			new style = Timer_GetStyle(client);
 			if(g_Physics[style][StyleCustom] && !g_bCustomLowGravity[client])
@@ -2057,7 +2073,7 @@ public Action:Timer_UpdateGravity(Handle:timer)
 				SetEntityGravity(client, g_Physics[style][StyleGravity]);
 				continue;
 			}
-			
+
 			SetEntityGravity(client, 1.0);
 		}
 	}
@@ -2073,7 +2089,7 @@ public Action:Timer_CheckNoClip(Handle:timer)
 		{
 			if(IsClientConnected(client) && IsClientSourceTV(client))
 				continue;
-			
+
 			//has player noclip?
 			if(GetEntProp(client, Prop_Send, "movetype", 1) == 8)
 			{
@@ -2082,7 +2098,7 @@ public Action:Timer_CheckNoClip(Handle:timer)
 					SetEntityMoveType(client, MOVETYPE_WALK);
 					CheckVelocity(client, 1, 0.1);
 				}
-				
+
 				Timer_Stop(client, false);
 				ResetBhopAvoid(client);
 				ResetBhopCollect(client);
@@ -2097,7 +2113,7 @@ ParseColor(const String:color[], result[])
 {
 	decl String:buffers[4][4];
 	ExplodeString(color, " ", buffers, sizeof(buffers), sizeof(buffers[]));
-	
+
 	for (new i = 0; i < sizeof(buffers); i++)
 		result[i] = StringToInt(buffers[i]);
 }
@@ -2106,33 +2122,33 @@ stock Client_Push(client, Float:clientEyeAngle[3], Float:power, VelocityOverride
 {
 	decl	Float:forwardVector[3],
 	Float:newVel[3];
-	
+
 	GetAngleVectors(clientEyeAngle, forwardVector, NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(forwardVector, forwardVector);
 	ScaleVector(forwardVector, power);
-	
+
 	Entity_GetAbsVelocity(client,newVel);
-	
+
 	for (new i=0;i<3;i++){
 		switch(override[i]){
 			case VelocityOvr_Velocity:{
 				newVel[i] = 0.0;
 			}
-			case VelocityOvr_OnlyWhenNegative:{				
+			case VelocityOvr_OnlyWhenNegative:{
 				if(newVel[i] < 0.0){
 					newVel[i] = 0.0;
 				}
 			}
-			case VelocityOvr_InvertReuseVelocity:{				
+			case VelocityOvr_InvertReuseVelocity:{
 				if(newVel[i] < 0.0){
 					newVel[i] *= -1.0;
 				}
 			}
 		}
-		
+
 		newVel[i] += forwardVector[i];
 	}
-	
+
 	Entity_SetAbsVelocity(client,newVel);
 }
 
@@ -2140,9 +2156,9 @@ public Action:Command_ReloadConfig(client, args)
 {
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	ReplyToCommand(client, "Timer: Settings reloaded.");
-		
+
 	return Plugin_Handled;
 }
 
@@ -2153,7 +2169,7 @@ public Action:Command_NoclipMe(client, args)
 		ReplyToCommand(client, "\x04[SM] \x05You need to be alive to use noclip");
 		return Plugin_Handled;
 	}
-	
+
 	if(g_Settings[NoclipEnable])
 	{
 		if (GetEntityMoveType(client) != MOVETYPE_NOCLIP && !Timer_IsPlayerTouchingZoneType(client, ZtAntiNoclip))
@@ -2170,7 +2186,7 @@ public Action:Command_NoclipMe(client, args)
 		}
 	}
 	else ReplyToCommand(client, "You have not access to this command.");
-	
+
 	return Plugin_Handled;
 }
 
@@ -2180,7 +2196,7 @@ public Action:Command_Colour(client, args)
 	{
 		return Plugin_Handled;
 	}
-	
+
 	if (g_colourme[client] == 1)
 	{
 		g_colourme[client] = 0;
@@ -2189,7 +2205,7 @@ public Action:Command_Colour(client, args)
 	{
 		g_colourme[client] = 1;
 	}
-	
+
 	return Plugin_Handled;
 }
 
@@ -2199,7 +2215,7 @@ public Action:Command_ToggleAuto(client, args)
 	{
 		return Plugin_Handled;
 	}
-	
+
 	if (g_bAutoDisable[client])
 	{
 		g_bAutoDisable[client] = false;
@@ -2216,7 +2232,7 @@ public Action:Command_ToggleAuto(client, args)
 public Action:Timer_Push(Handle:timer, any:client)
 {
 	Push_Client(client);
-	
+
 	return Plugin_Stop;
 }
 
@@ -2232,7 +2248,7 @@ public Action:Timer_Boost(Handle:timer, any:client)
 {
 	new style = Timer_GetStyle(client);
 	Client_BoostForward(client, g_Physics[style][StyleBoostForward], g_Physics[style][StyleBoostForwardMax]);
-	
+
 	return Plugin_Stop;
 }
 
@@ -2240,10 +2256,10 @@ Client_BoostForward(client, Float:scale, Float:maxspeed)
 {
 	new Float:fVelocity[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fVelocity);
-	
+
 	fVelocity[0] = fVelocity[0]*scale;
 	fVelocity[1] = fVelocity[1]*scale;
-	
+
 	if(maxspeed == 0.0 || SquareRoot(Pow(fVelocity[0],2.0)+Pow(fVelocity[1],2.0)) < maxspeed)
 	{
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, fVelocity);
@@ -2253,13 +2269,13 @@ Client_BoostForward(client, Float:scale, Float:maxspeed)
 PunishAbuse(client, type = -1)
 {
 	new style = Timer_GetStyle(client);
-	
+
 	if(type == -1)
 		type = g_Physics[style][StylePunishType];
-	
+
 	if(type <= 0)
 		return;
-	
+
 	//Block controls
 	if(type == 1)
 	{

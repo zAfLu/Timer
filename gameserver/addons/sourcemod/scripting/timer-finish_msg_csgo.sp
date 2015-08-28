@@ -84,112 +84,110 @@ public OnTimerRecord(client, track, style, Float:time, Float:lasttime, currentra
 {
 	decl String:name[MAX_NAME_LENGTH];
 	GetClientName(client, name, sizeof(name));
-	
+
+	//General Info
+	new Float:fWrTime;
+	new iTotalRanks;
+
 	//Record Info
-	new RecordId;
-	new Float:RecordTime;
-	new RankTotal;
-	new Float:LastTime;
-	new Float:LastTimeStatic;
-	new LastJumps;
-	decl String:TimeDiff[32];
-	decl String:buffer[32];
-	
-	new bool:NewPersonalRecord = false;
-	new bool:NewWorldRecord = false;
-	new bool:FirstRecord = false;
-	
-	new bool:ranked, Float:jumpacc;
-	if(g_timerPhysics) 
+	decl String:sTime[64];
+
+	new Float:fTimeDiff;
+	new iStrafeCount;
+	new Float:fJumpAcc;
+	new bool:bRankedStyle;
+
+	new bool:bNewPersonalRecord;
+	new bool:bNewWorldRecord;
+	new bool:bFirstRecord;
+	new bool:bOnlyTimeImproved;
+
+	// Core
+	new bool:enabled = false, jumps, fpsmax;
+	Timer_SecondsToTime(time, sTime, sizeof(sTime), 2);
+	new Float:fTimeOld;
+	Timer_GetClientTimer(client, enabled, fTimeOld, jumps, fpsmax);
+
+	// Physics
+	if(g_timerPhysics)
 	{
-		ranked = bool:Timer_IsStyleRanked(style);
-		Timer_GetJumpAccuracy(client, jumpacc);
+		bRankedStyle = bool:Timer_IsStyleRanked(style);
+		Timer_GetJumpAccuracy(client, fJumpAcc);
 	}
-	
-	new strafes;
-	if(g_timerStrafes)  strafes = Timer_GetStrafeCount(client);
 
-	
-	new bool:enabled = false;
-	new jumps = 0;
-	new fpsmax;
+	// Strafes
+	if(g_timerStrafes)
+	{
+		iStrafeCount = Timer_GetStrafeCount(client);
+	}
 
-	Timer_GetClientTimer(client, enabled, time, jumps, fpsmax);
-	
-	if(g_timerWorldRecord) 
+	if(g_timerWorldRecord)
 	{
 		/* Get Personal Record */
-		if(Timer_GetBestRound(client, style, track, LastTime, LastJumps))
+		if(lasttime > 0.0)
 		{
-			LastTimeStatic = LastTime;
-			LastTime -= time;			
-			if(LastTime < 0.0)
-			{
-				LastTime *= -1.0;
-				Timer_SecondsToTime(LastTime, buffer, sizeof(buffer), 3);
-				FormatEx(TimeDiff, sizeof(TimeDiff), "+%s", buffer);
-			}
-			else if(LastTime > 0.0)
-			{
-				Timer_SecondsToTime(LastTime, buffer, sizeof(buffer), 3);
-				FormatEx(TimeDiff, sizeof(TimeDiff), "-%s", buffer);
-			}
-			else if(LastTime == 0.0)
-			{
-				Timer_SecondsToTime(LastTime, buffer, sizeof(buffer), 3);
-				FormatEx(TimeDiff, sizeof(TimeDiff), "%s", buffer);
-			}
+			fTimeDiff = lasttime-time;
+
+			if(fTimeDiff < 0.0)
+				fTimeDiff *= -1.0;
 		}
 		else
 		{
 			//No personal record, this is his first record
-			FirstRecord = true;
-			LastTime = 0.0;
-			Timer_SecondsToTime(LastTime, buffer, sizeof(buffer), 3);
-			FormatEx(TimeDiff, sizeof(TimeDiff), "%s", buffer);
-			RankTotal++;
+			bFirstRecord = true;
+			fTimeDiff = 0.0;
+			iTotalRanks++;
 		}
 	}
-	
-	decl String:TimeString[32];
-	Timer_SecondsToTime(time, TimeString, sizeof(TimeString), 2);
-	
-	new String:WrName[32], String:WrTime[32];
-	new Float:wrtime;
-	
-	if(g_timerWorldRecord) 
+
+	new String:sBeatenName[32], String:sBeatenTime[32];
+	new Float:fBeatenTime;
+
+	if(g_timerWorldRecord)
 	{
-		Timer_GetRecordTimeInfo(style, track, newrank, wrtime, WrTime, 32);
-		Timer_GetRecordHolderName(style, track, newrank, WrName, 32);
-	
+		Timer_GetRecordTimeInfo(style, track, newrank, fBeatenTime, sBeatenTime, 32);
+		Timer_GetRecordHolderName(style, track, newrank, sBeatenName, 32);
+
 		/* Get World Record */
-		Timer_GetStyleRecordWRStats(style, track, RecordId, RecordTime, RankTotal);
+		new RecordId;
+		Timer_GetStyleRecordWRStats(style, track, RecordId, fWrTime, iTotalRanks);
 	}
 	
+	new Float:fWRDiffTime;
+	new String:sWrDiffTime[32];
+	
+	fWRDiffTime = time-fWrTime;
+	Timer_SecondsToTime(fWRDiffTime, sWrDiffTime, sizeof(sWrDiffTime), 2);
+	
+	if(fWrTime <= 0.0)
+		Format(sWrDiffTime, sizeof(sWrDiffTime), "-%s", sWrDiffTime);
+	else if(fWrTime <= time)
+		Format(sWrDiffTime, sizeof(sWrDiffTime), "+%s", sWrDiffTime);
+	else Format(sWrDiffTime, sizeof(sWrDiffTime), "-%s", sWrDiffTime);
+	
+	//PrintToChat(client, "[DEBUG] %.2f - %.2f = %.2f", time, fWrTime, fWRDiffTime);
+	//PrintToChat(client, "[DEBUG] %s", sWrDiffTime);
+
 	/* Detect Record Type */
-	if(RecordTime == 0.0 || time < RecordTime)
+	if(fWrTime == 0.0 || time < fWrTime)
 	{
-		NewWorldRecord = true;
+		bNewWorldRecord = true;
 	}
-	
-	if(LastTimeStatic == 0.0 || time < LastTimeStatic)
+
+	if(lasttime == 0.0 || time < lasttime)
 	{
-		NewPersonalRecord = true;
+		bNewPersonalRecord = true;
 	}
-	
-	new bool:self = false;
-	
+
 	if(currentrank == newrank)
-	{
-		self = true;
-	}
-	
-	if(FirstRecord) RankTotal++;
-	
-	new Float:wrdiff = time-wrtime;
-	
+		bOnlyTimeImproved = true;
+
+	if(bFirstRecord) iTotalRanks++;
+
+	new Float:fBeatenTimeDiff = time-fBeatenTime;
+
 	new String:BonusString[32];
-	
+
 	if(track == TRACK_BONUS)
 	{
 		FormatEx(BonusString, sizeof(BonusString), " {olive}bonus");
@@ -210,82 +208,79 @@ public OnTimerRecord(client, track, style, Float:time, Float:lasttime, currentra
 	{
 		FormatEx(BonusString, sizeof(BonusString), " {olive}bonus5");
 	}
-	
+
 	new String:RankString[128], String:RankPwndString[128];
 
-	new String:JumpString[128];
+	new String:sJumps[128];
 	new bool:bAll = false;
-	
+
 	new String:StyleString[128];
-	if(g_Settings[MultimodeEnable]) 
+	if(g_Settings[MultimodeEnable])
 		FormatEx(StyleString, sizeof(StyleString), " on {olive}%s", g_Physics[style][StyleName]);
-	
-	if(NewWorldRecord)
+
+	if(bNewWorldRecord)
 	{
 		bAll = true;
-		FormatEx(RankString, sizeof(RankString), "{purple}NEW WORLD RECORD");
-		
-		if(wrtime > 0.0)
+		FormatEx(RankString, sizeof(RankString), "{purple} NEW MAP RECORD");
+
+		if(fBeatenTime > 0.0)
 		{
-			if(self)
-				FormatEx(RankPwndString, sizeof(RankPwndString), "{olive}Improved {lightred}%s{olive}! {lightred}[%.2fs]{olive} diff, old time was {lightred}[%s]", "himself", wrdiff, WrTime);
+			if(bOnlyTimeImproved)
+				FormatEx(RankPwndString, sizeof(RankPwndString), "{olive}Improved {lightred}%s{olive}! {lightred}[%.2fs]{olive} diff, old time was {lightred}[%s]", "himself", fBeatenTimeDiff, sBeatenTime);
 			else
-				FormatEx(RankPwndString, sizeof(RankPwndString), "{olive}Beaten {lightred}%s{olive}! {lightred}[%.2fs]{olive} diff, old time was {lightred}[%s]", WrName, wrdiff, WrTime);
+				FormatEx(RankPwndString, sizeof(RankPwndString), "{olive}Beaten {lightred}%s{olive}! {lightred}[%.2fs]{olive} diff, old time was {lightred}[%s]", sBeatenName, fBeatenTimeDiff, sBeatenTime);
 		}
 	}
-	else if(newrank > 5000)
-	{
-		FormatEx(RankString, sizeof(RankString), "{lightred}#%d+ / %d", newrank, RankTotal);
-	}
-	else if(NewPersonalRecord || FirstRecord)
+	else if(bNewPersonalRecord || bFirstRecord)
 	{
 		bAll = true;
-		FormatEx(RankString, sizeof(RankString), "{lightred}#%d / %d", newrank, RankTotal);
-		
-		if(newrank < currentrank) FormatEx(RankPwndString, sizeof(RankPwndString), "{olive}Beaten {lightred}%s{olive}! {lightred}[%.2fs]{olive} diff, old time was {lightred}[%s]", WrName, wrdiff, WrTime);
-	}	
-	else if(NewPersonalRecord)
-	{
-		FormatEx(RankString, sizeof(RankString), "{orange}#%d / %d", newrank, RankTotal);
-		
-		Format(RankPwndString, sizeof(RankPwndString), "You have improved {lightred}yourself! {lightred}[%.2fs]{olive} diff, old time was {lightred}[%s]", wrdiff, WrTime);
+		FormatEx(RankString, sizeof(RankString), "{lightred}#%d / %d", newrank, iTotalRanks);
+
+		if(newrank < currentrank)
+			FormatEx(RankPwndString, sizeof(RankPwndString), "{olive}Beaten {lightred}%s{olive}! {lightred}[%.2fs]{olive} diff, old time was {lightred}[%s]", sBeatenName, fBeatenTimeDiff, sBeatenTime);
 	}
-	
+	else if(bNewPersonalRecord)
+	{
+		FormatEx(RankString, sizeof(RankString), "{orange}#%d / %d", newrank, iTotalRanks);
+
+		Format(RankPwndString, sizeof(RankPwndString), "You have improved {lightred}yourself! {lightred}[%.2fs]{olive} diff, old time was {lightred}[%s]", fBeatenTimeDiff, sBeatenTime);
+	}
+
 	if(g_Settings[JumpsEnable])
 	{
-		FormatEx(JumpString, sizeof(JumpString), "{olive} and {lightred}%d jumps [%.2f ⁰⁄₀]", jumps, jumpacc);
+		FormatEx(sJumps, sizeof(sJumps), "{olive} and {lightred}%d jumps [%.2f ⁰⁄₀]", jumps, fJumpAcc);
 	}
-	
-	if(g_Settings[StrafesEnable])
+
+	if(g_Settings[StrafesEnable] && g_timerStrafes)
 	{
-		FormatEx(JumpString, sizeof(JumpString), "{olive} and {lightred}%d strafes", strafes);
+		FormatEx(sJumps, sizeof(sJumps), "{olive} and {lightred}%d strafes", iStrafeCount);
 	}
-	
-	if(ranked)
+
+	if(bRankedStyle)
 	{
-		if(FirstRecord || NewPersonalRecord)
+		if(bFirstRecord || bNewPersonalRecord)
 		{
 			if(bAll)
 			{
-				CPrintToChatAll("%s {olive}Player {lightred}%s{olive} has finished%s{olive}%s{olive}.", PLUGIN_PREFIX2, name, BonusString, StyleString);
-				CPrintToChatAll("{olive}Time: {lightred}[%ss] %s %s", TimeString, JumpString, RankString);
+				CPrintToChatAll("%s {lightred}%s{olive} has finished%s{olive}%s{olive}.", PLUGIN_PREFIX2, name, BonusString, StyleString);
+				CPrintToChatAll("{olive}Time: {lightred}%ss (WR %s) %s %s", sTime, sWrDiffTime, sJumps, RankString);
 				CPrintToChatAll("%s", RankPwndString);
 			}
 			else
 			{
 				CPrintToChat(client, "%s {lightred}You{olive} have finished%s{olive}%s{olive}.", PLUGIN_PREFIX2, BonusString, StyleString);
-				CPrintToChat(client, "{olive}Time: {lightred}[%ss] %s %s", TimeString, JumpString, RankString);
+				CPrintToChat(client, "{olive}Time: {lightred}%ss (WR %s) %s %s", sTime, sWrDiffTime, sJumps, RankString);
 				CPrintToChat(client, "%s", RankPwndString);
 			}
 		}
 		else
 		{
-			CPrintToChat(client, "%s {lightred}You{olive} have finished%s{olive}%s{olive}. Time: {lightred}[%ss] %s %s", PLUGIN_PREFIX2, BonusString, StyleString, TimeString, JumpString, RankString);
+			CPrintToChat(client, "%s {lightred}You{olive} have finished%s{olive}%s{olive}. Time: {lightred}%ss (WR %s) %s %s", PLUGIN_PREFIX2, BonusString, StyleString, sTime, sWrDiffTime, sJumps, RankString);
 		}
 	}
 	else
 	{
 		CPrintToChat(client, "{lightred}You{olive} have finished%s{olive}%s{olive}.", PLUGIN_PREFIX2, BonusString, StyleString);
-		CPrintToChat(client, "{olive}Time: {lightred}[%ss] %s", TimeString, JumpString);
+		CPrintToChat(client, "{olive}Time: {lightred}[%ss] %s", sTime, sJumps);
 	}
 }

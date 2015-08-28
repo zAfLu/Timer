@@ -34,6 +34,8 @@ $Copyright: (c) Simple Plugins 2008-2009$
 *************************************************************************
 */
 
+#pragma dynamic 131072 
+
 #include <sourcemod>
 
 #define PLUGIN_VERSION				"2.0.2 (modified by Zipcore)"

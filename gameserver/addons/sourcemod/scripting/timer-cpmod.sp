@@ -6,6 +6,7 @@
 #undef REQUIRE_PLUGIN
 #include <timer>
 #include <timer-teams>
+#include <timer-physics>
 #include <timer-mapzones>
 
 #undef REQUIRE_EXTENSIONS

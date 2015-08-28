@@ -1827,7 +1827,11 @@ RecordQuery(client, JumpType:type, Float:distance, Float:pre, strafe)
 		decl String:query[512], String:steamid[64], String:temp[64], String:name[64];
 		GetClientName(client, temp, sizeof(temp));
 		SQL_EscapeString(maindb, temp, name, sizeof(name));
-		GetClientAuthString(client, steamid, sizeof(steamid));
+		#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+			GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
+		#else
+			GetClientAuthString(client, steamid, sizeof(steamid));
+		#endif
 		Format(query, sizeof(query), "select distance from 'ljstats' where steamid = '%s' and type = %d", steamid, type);
 		new Handle:datapack = CreateDataPack();
 		WritePackString(datapack, steamid);

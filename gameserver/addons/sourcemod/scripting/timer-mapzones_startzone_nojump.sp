@@ -1,11 +1,13 @@
 #pragma semicolon 1
- 
+
 #include <sourcemod>
 #include <sdktools>
 #include <timer>
 #include <timer-stocks>
 #include <timer-mapzones>
- 
+#include <timer-physics>
+#include <timer-config_loader.sp>
+
 public Plugin:myinfo =
 {
 	name        = "[Timer] Start zone no jump",
@@ -17,14 +19,25 @@ public Plugin:myinfo =
 
 public OnPluginStart()
 {
+	LoadPhysics();
+	LoadTimerSettings();
 	HookEvent("player_jump", Event_PlayerJump);
+}
+
+public OnMapStart()
+{
+	LoadPhysics();
+	LoadTimerSettings();
 }
 
 public Action:Event_PlayerJump(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new client = GetClientOfUserId(GetEventInt(event, "userid"));
 
-	if(Timer_IsPlayerTouchingZoneType(client, ZtStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonusStart))
+	if(!g_Physics[Timer_GetStyle(client)][StyleStartZoneAntiBhop])
+		return Plugin_Continue;
+
+	if(Timer_IsPlayerTouchingZoneType(client, ZtStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonusStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonus2Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus3Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus4Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus5Start))
 	{
 		CreateTimer(0.05, DelayedSlowDown, client);
 	}
@@ -45,8 +58,8 @@ public OnClientEndTouchZoneType(client, MapZoneType:type)
 	if(type == ZtStart || type == ZtBonusStart)
 	{
 		new bool:onground = bool:(GetEntityFlags(client) & FL_ONGROUND);
-		
-		if(!onground)
+
+		if(!onground && g_Physics[Timer_GetStyle(client)][StyleStartZoneAntiBhop])
 		{
 			CheckVelocity(client, 1, 120.0);
 		}

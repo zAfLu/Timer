@@ -1,3 +1,5 @@
+#pragma dynamic 131072 
+
 #include <sourcemod>
 #include <sdktools>
 #include <smlib>
@@ -551,17 +553,15 @@ public OnClientDisconnect(client)
 	if(!g_iEnabled)
 		return;
 
-	//g_sAuth[client][0] = '\0';
-	
 	if(g_bAuthed[client])
 	{
 		new points, points_start;
 		if(KvJumpToKey(g_hSession, g_sAuth[client], false))
 		{
 			points_start = KvGetNum(g_hSession, "points", 0);
-			points = Timer_GetPoints(client);
+			points = g_iCurrentPoints[client];
 		}
-		
+
 		KvSetFloat(g_hSession, "disconnec_time", GetEngineTime());
 		
 		new String:sPre[3];
@@ -575,8 +575,8 @@ public OnClientDisconnect(client)
 		{
 			GetArrayString(g_hCfgArray_DisplayChat, g_iCurrentIndex[client], sNameBuffer, sizeof(sNameBuffer));
 		}
-		
-		if(g_iPositionMethod == 2)
+
+		if(g_iPositionMethod == 2 || points <= 0)
 		{
 			#if defined LEGACY_COLORS
 			CFormat(sNameBuffer, 1024, client);
@@ -605,9 +605,11 @@ public OnClientDisconnect(client)
 	g_bLoadedCookies[client] = false;
 
 	g_iNextIndex[client] = -1;
+
+	g_iCurrentPoints[client] = -1;
+	g_iCurrentRank[client] = -1;
 	g_iCurrentIndex[client] = -1;
 	g_iCompletions[client] = 0;
-	g_iCurrentPoints[client] = -1;
 	g_iLastGlobalMessage[client] = 0;
 	g_iClientDisplay[client] = 0;
 }
@@ -1613,7 +1615,7 @@ ShowConnectMsg(client)
 	{
 		#if defined LEGACY_COLORS
 		CFormat(sNameBuffer, 1024, client);
-		CPrintToChatAll("%s%N {olive}[{lightred}%d points{olive}] connected from %s.", sNameBuffer, client, g_iCurrentPoints[client], s_Country);
+		CPrintToChatAll("%s%N: {default}rank {yellow}%d/%d {default}with {yellow}%d points {default}connected from {lightgreen}%s{default}.", sNameBuffer, client, g_iCurrentRank[client], g_iTotalPlayers, g_iCurrentPoints[client], s_Country);
 		#else
 		CReplaceColorCodes(sNameBuffer, client, false, 1024);
 		CPrintToChatAll("%s%N {green}[{yellow}%d points{green}] connected from %s.", sNameBuffer, client, g_iCurrentPoints[client], s_Country);
@@ -2596,9 +2598,16 @@ public Native_GetPointRank(Handle:plugin, numParams)
 
 public Native_GetTag(Handle:plugin, numParams)
 {
-	decl String:sTagBuffer[128];
-	GetArrayString(g_hCfgArray_DisplayTag, g_iCurrentIndex[GetNativeCell(3)], sTagBuffer, sizeof(sTagBuffer));
-	SetNativeString(1, sTagBuffer, GetNativeCell(2));
+	if(g_iCurrentIndex[GetNativeCell(3)] != -1)
+	{
+		decl String:sTagBuffer[128];
+		GetArrayString(g_hCfgArray_DisplayTag, g_iCurrentIndex[GetNativeCell(3)], sTagBuffer, sizeof(sTagBuffer));
+		SetNativeString(1, sTagBuffer, GetNativeCell(2));
+	}
+	else
+	{
+		SetNativeString(1, g_sLoadingChatTag, GetNativeCell(2));
+	}
 }
 
 public Native_GetChatTag(Handle:plugin, numParams)

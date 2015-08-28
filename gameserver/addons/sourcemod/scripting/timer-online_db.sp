@@ -10,7 +10,7 @@ new bool:g_bAuthed[MAXPLAYERS + 1];
 new Handle:g_hServerID = INVALID_HANDLE;
 new g_iServerID;
 
-public Plugin:myinfo = 
+public Plugin:myinfo =
 {
 	name = "[Timer] Players Online DB",
 	author = "Zipcore",
@@ -33,9 +33,9 @@ public OnPluginStart()
 	HookConVarChange(g_hServerID, OnCVarChange);
 
 	AutoExecConfig(true, "timer/timer-online_DB");
-	
+
 	RegAdminCmd("sm_online_refresh", Command_RefreshTable, ADMFLAG_ROOT);
-	
+
 	if (g_hSQL == INVALID_HANDLE)
 	{
 		ConnectSQL();
@@ -76,12 +76,16 @@ RefreshTable()
 	decl String:query[512];
 	Format(query, sizeof(query), "DELETE FROM `online` WHERE `server` = %d", g_iServerID);
 	SQL_TQuery(g_hSQL, DeleteCallback, query, _, DBPrio_High);
-	
+
 	for(new i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && !IsFakeClient(i) && !IsClientSourceTV(i))
 		{
-			g_bAuthed[i] = GetClientAuthString(i, g_sAuth[i], sizeof(g_sAuth[]));
+			#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+				g_bAuthed[i] = GetClientAuthId(i, AuthId_Steam2, g_sAuth[i], sizeof(g_sAuth[]));
+			#else
+				g_bAuthed[i] = GetClientAuthString(i, g_sAuth[i], sizeof(g_sAuth[]));
+			#endif
 			if(g_bAuthed[i])
 			{
 				FormatEx(query, sizeof(query), "INSERT INTO `online` (auth, server) VALUES ('%s','%d') ON DUPLICATE KEY server = %d;", g_sAuth[i], g_iServerID, g_iServerID);
@@ -96,9 +100,13 @@ public OnClientPostAdminCheck(client)
 	g_bAuthed[client] = false;
 	if(IsFakeClient(client) || IsClientSourceTV(client))
 		return;
-	
-	g_bAuthed[client] = GetClientAuthString(client, g_sAuth[client], sizeof(g_sAuth[]));
-	
+
+	#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+		g_bAuthed[client] = GetClientAuthId(client, AuthId_Steam2, g_sAuth[client], sizeof(g_sAuth[]));
+	#else
+		g_bAuthed[client] = GetClientAuthString(client, g_sAuth[client], sizeof(g_sAuth[]));
+	#endif
+
 	if (g_hSQL != INVALID_HANDLE)
 	{
 		if(Client_IsValid(client) && !IsFakeClient(client))
@@ -123,10 +131,10 @@ public OnClientDisconnect_Post(client)
 ConnectSQL()
 {
 	g_hSQL = Handle:Timer_SqlGetConnection();
-	
+
 	if (g_hSQL == INVALID_HANDLE)
 		CreateTimer(0.1, Timer_SQLReconnect, _ , TIMER_FLAG_NO_MAPCHANGE);
-	else 
+	else
 	{
 		SQL_TQuery(g_hSQL, CreateSQLTableCallback, "CREATE TABLE IF NOT EXISTS `online` (`auth` varchar(24) NOT NULL, `server` int(11) NOT NULL, UNIQUE KEY `online_single` (`auth`));");
 		RefreshTable();
@@ -138,17 +146,17 @@ public CreateSQLTableCallback(Handle:owner, Handle:hndl, const String:error[], a
 	if (owner == INVALID_HANDLE)
 	{
 		Timer_LogError(error);
-		
+
 		ConnectSQL();
 		return;
 	}
-	
+
 	if (hndl == INVALID_HANDLE)
 	{
 		Timer_LogError("SQL Error on CreateSQLTable: %s", error);
 		return;
 	}
-	
+
 	RefreshTable();
 }
 

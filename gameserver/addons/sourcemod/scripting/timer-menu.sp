@@ -20,12 +20,12 @@ public OnPluginStart()
 {
 	LoadPhysics();
 	LoadTimerSettings();
-	
-	RegConsoleCmd("sm_menu", Command_Menu);	
+
+	RegConsoleCmd("sm_menu", Command_Menu);
 	RegConsoleCmd("sm_timer", Command_HelpMenu);
 	RegConsoleCmd("sm_help", Command_HelpMenu);
 	RegConsoleCmd("sm_commands", Command_HelpMenu);
-	
+
 	mod = GetGameMod();
 }
 
@@ -33,14 +33,14 @@ public OnMapStart()
 {
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	GetCurrentMap(g_sCurrentMap, sizeof(g_sCurrentMap));
 }
 
 public Action:Command_Menu(client, args)
 {
 	Menu(client);
-	
+
 	return Plugin_Handled;
 }
 
@@ -62,14 +62,14 @@ public Action:Command_HelpMenu(client, args)
 	Init_Commands();
 	g_iCurrentPage[client] = 1;
 	CommandPanel(client);
-	
+
 	return Plugin_Handled;
 }
 
 public Init_Commands()
 {
 	g_iCmdCount = 0;
-	
+
 	Add_Command("!timer - Displays this menu", "timer-core.smx");
 	Add_Command("!menu - Displays a main menu", "timer-menu.smx");
 	Add_Command("!style - Displays style selection menu", "timer-physics.smx");
@@ -115,7 +115,7 @@ public Init_Commands()
 	Add_Command("!ljpopup - Toogle Long Jump Stats Popup", "timer-ljstats.smx");
 	Add_Command("!ljblock - Register Long Jump Destination", "timer-ljstats.smx");
 	Add_Command("!gap - Measure units between 2 point", "timer-ljstats.smx");
-	
+
 	Add_Command("!credits - Displays Credits", "timer-core.smx");
 }
 
@@ -133,16 +133,16 @@ Add_Command(String:info[], String:plugin[], bool:enable = true)
 public CommandPanel(client)
 {
 	new firstcomand = g_iCurrentPage[client]*commandsperpage-commandsperpage;
-	
+
 	new Handle:panel = CreatePanel();
 	SetPanelTitle(panel, ">>> Timer Help Menu <<<\nby Zipcore");
-	
+
 	new String:sPage[512];
 	Format(sPage, sizeof(sPage), "         -- Page %d/%d --", g_iCurrentPage[client], maxpage);
-	
+
 	DrawPanelText(panel, sPage);
 	DrawPanelText(panel, " ");
-	
+
 	new String:buffer[512];
 	new iCmdCount;
 	for(new i=firstcomand; i < (g_iCurrentPage[client]*commandsperpage); i++)
@@ -151,24 +151,26 @@ public CommandPanel(client)
 		DrawPanelText(panel, buffer);
 		iCmdCount++;
 	}
-	
+
 	DrawPanelText(panel, " ");
-	
-	
+
+
 	new startkey = 8;
 	if(g_iCurrentPage[client] > 1)
 		startkey = 7;
-	
+
 	//Fix CS:GO menu buttons
 	if(mod == MOD_CSGO) SetPanelCurrentKey(panel, startkey);
 	else SetPanelCurrentKey(panel, startkey+1);
-	
+
 	if(g_iCurrentPage[client] > 1) DrawPanelItem(panel, "- Back -");
 	else DrawPanelText(panel, " ");
 	if(g_iCurrentPage[client] < maxpage) DrawPanelItem(panel, "- Next -");
 	else DrawPanelText(panel, " ");
+
+	SetPanelCurrentKey(panel, 9);
 	DrawPanelItem(panel, "- Exit -");
-	
+
 	SendPanelToClient(panel, client, CommandPanelHandler, MENU_TIME_FOREVER);
 
 	CloseHandle(panel);
@@ -178,7 +180,7 @@ public CommandPanelHandler (Handle:menu, MenuAction:action,client, param2)
 {
     if ( action == MenuAction_Select )
     {
-		if(mod == MOD_CSGO) 
+		if(mod == MOD_CSGO)
 		{
 			switch (param2)
 			{
@@ -222,9 +224,9 @@ Menu(client)
 	if (0 < client < MaxClients)
 	{
 		new Handle:menu = CreateMenu(Handle_Menu);
-		SetMenuTitle(menu, "Timer - Main Menu \nby Zipcore");		
-			
-		AddMenuItem(menu, "mode", "Change Style");			
+		SetMenuTitle(menu, "Timer - Main Menu \nby Zipcore");
+
+		AddMenuItem(menu, "mode", "Change Style");
 		if(PluginEnabled("timer-physicsinfo.smx"))
 		{
 			AddMenuItem(menu, "info", "Mode Settings Info");
@@ -243,11 +245,11 @@ Menu(client)
 			AddMenuItem(menu, "hud", "Custom HUD Settings");
 		}
 		AddMenuItem(menu, "credits", "Credits");
-		
+
 		DisplayMenu(menu, client, MENU_TIME_FOREVER);
 	}
 }
-	
+
 public Handle_Menu(Handle:menu, MenuAction:action, client, itemNum)
 {
 	if ( action == MenuAction_Select )
@@ -274,11 +276,11 @@ public Handle_Menu(Handle:menu, MenuAction:action, client, itemNum)
 			}
 			else if(StrEqual(info, "challenge"))
 			{
-				if(IsClientInGame(client)) FakeClientCommand(client, "sm_challenge"); 
+				if(IsClientInGame(client)) FakeClientCommand(client, "sm_challenge");
 			}
 			else if(StrEqual(info, "hud"))
 			{
-				if(IsClientInGame(client)) FakeClientCommand(client, "sm_hud"); 
+				if(IsClientInGame(client)) FakeClientCommand(client, "sm_hud");
 			}
 			else if(StrEqual(info, "credits"))
 			{
@@ -293,18 +295,18 @@ WorldRecordMenu(client)
 	if (0 < client < MaxClients)
 	{
 		new Handle:menu = CreateMenu(Handle_WorldRecordMenu);
-				
+
 		SetMenuTitle(menu, "World Record Menu");
-		
+
 		AddMenuItem(menu, "wr", "World Record");
 		AddMenuItem(menu, "bwr", "Bonus World Record");
 		AddMenuItem(menu, "swr", "Short World Record");
 		AddMenuItem(menu, "main", "Back");
-		
+
 		DisplayMenu(menu, client, MENU_TIME_FOREVER);
 	}
 }
-	
+
 public Handle_WorldRecordMenu(Handle:menu, MenuAction:action, client, itemNum)
 {
 	if ( action == MenuAction_Select )
@@ -338,9 +340,9 @@ TeleportMenu(client)
 	if (0 < client < MaxClients)
 	{
 		new Handle:menu = CreateMenu(Handle_TeleportMenu);
-				
+
 		SetMenuTitle(menu, "Teleport Menu");
-		
+
 		if(g_Settings[PlayerTeleportEnable])
 		{
 			AddMenuItem(menu, "teleme", "Teleport to Player");
@@ -354,11 +356,11 @@ TeleportMenu(client)
 			AddMenuItem(menu, "checkpoint", "Teleport to Checkpoint");
 		}
 		AddMenuItem(menu, "main", "Back");
-		
+
 		DisplayMenu(menu, client, MENU_TIME_FOREVER);
 	}
 }
-	
+
 public Handle_TeleportMenu(Handle:menu, MenuAction:action, client, itemNum)
 {
 	if ( action == MenuAction_Select )

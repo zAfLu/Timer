@@ -9,23 +9,29 @@
 
 #define MAX_FILE_LEN 128
 
-new Handle:Sound_TimerFinish = INVALID_HANDLE;
-new String:SND_TIMER_FINISH[MAX_FILE_LEN];
+new Handle:g_hTimerFinish = INVALID_HANDLE;
+new String:g_sTimerFinish[MAX_FILE_LEN];
+new bool:g_bTimerFinish = false;
 
-new Handle:Sound_TimerResume = INVALID_HANDLE;
-new String:SND_TIMER_RESUME[MAX_FILE_LEN];
+new Handle:g_hTimerResume = INVALID_HANDLE;
+new String:g_sTimerResume[MAX_FILE_LEN];
+new bool:g_bTimerResume = false;
 
-new Handle:Sound_TimerPause = INVALID_HANDLE;
-new String:SND_TIMER_PAUSE[MAX_FILE_LEN];
+new Handle:g_hTimerPause = INVALID_HANDLE;
+new String:g_sTimerPause[MAX_FILE_LEN];
+new bool:g_bTimerPause = false;
 
-new Handle:Sound_TimerWorldRecord = INVALID_HANDLE;
-new String:SND_TIMER_WORLDRECORD[MAX_FILE_LEN];
+new Handle:g_hTimerWorldRecord = INVALID_HANDLE;
+new String:g_sTimerWorldRecord[MAX_FILE_LEN];
+new bool:g_bTimerWorldRecord = false;
 
-new Handle:Sound_TimerWorldRecordAll = INVALID_HANDLE;
-new String:SND_TIMER_WORLDRECORD_ALL[MAX_FILE_LEN];
+new Handle:g_hTimerWorldRecordAll = INVALID_HANDLE;
+new String:g_sTimerWorldRecordAll[MAX_FILE_LEN];
+new bool:g_bTimerWorldRecordAll = false;
 
-new Handle:Sound_TimerPersonalBest = INVALID_HANDLE;
-new String:SND_TIMER_PERSONALBEST[MAX_FILE_LEN];
+new Handle:g_hTimerPersonalBest = INVALID_HANDLE;
+new String:g_sTimerPersonalBest[MAX_FILE_LEN];
+new bool:g_bTimerPersonalBest = false;
 
 public Plugin:myinfo =
 {
@@ -38,81 +44,114 @@ public Plugin:myinfo =
 
 public OnPluginStart()
 {
-	Sound_TimerFinish = CreateConVar("timer_sound_finish", "ui/freeze_cam.wav", "");
-	Sound_TimerWorldRecord = CreateConVar("timer_sound_worldrecord", "ui/freeze_cam.wav", "");
-	Sound_TimerWorldRecordAll = CreateConVar("timer_sound_worldrecord_all", "ui/freeze_cam.wav", "");
-	Sound_TimerPause = CreateConVar("timer_sound_pause", "ui/freeze_cam.wav", "");
-	Sound_TimerResume = CreateConVar("timer_sound_resume", "ui/freeze_cam.wav", "");
-	Sound_TimerPersonalBest = CreateConVar("timer_sound_personalbest", "ui/freeze_cam.wav", "");
-	
-	AutoExecConfig(true, "timer/timer-sounds");
+  g_hTimerFinish = CreateConVar("timer_sound_finish", "ui/freeze_cam.wav", "");
+  g_hTimerWorldRecord = CreateConVar("timer_sound_worldrecord", "ui/freeze_cam.wav", "");
+  g_hTimerWorldRecordAll = CreateConVar("timer_sound_worldrecord_all", "ui/freeze_cam.wav", "");
+  g_hTimerPause = CreateConVar("timer_sound_pause", "ui/freeze_cam.wav", "");
+  g_hTimerResume = CreateConVar("timer_sound_resume", "ui/freeze_cam.wav", "");
+  g_hTimerPersonalBest = CreateConVar("timer_sound_personalbest", "ui/freeze_cam.wav", "");
+
+  AutoExecConfig(true, "timer/timer-sounds");
 }
 
 public OnConfigsExecuted()
 {
-	CacheSounds();
-	Timer_LogTrace("[Sound] Sounds cached OnConfigsExecuted");
+  CacheSounds();
+  Timer_LogTrace("[Sound] Sounds cached OnConfigsExecuted");
 }
 
 public CacheSounds()
 {
-	GetConVarString(Sound_TimerFinish, SND_TIMER_FINISH, sizeof(SND_TIMER_FINISH));
-	PrepareSound(SND_TIMER_FINISH);
-	
-	GetConVarString(Sound_TimerPause, SND_TIMER_PAUSE, sizeof(SND_TIMER_PAUSE));
-	PrepareSound(SND_TIMER_PAUSE);
-	
-	GetConVarString(Sound_TimerResume, SND_TIMER_RESUME, sizeof(SND_TIMER_RESUME));
-	PrepareSound(SND_TIMER_FINISH);
-	
-	GetConVarString(Sound_TimerWorldRecord, SND_TIMER_WORLDRECORD, sizeof(SND_TIMER_WORLDRECORD));
-	PrepareSound(SND_TIMER_WORLDRECORD);
-	
-	GetConVarString(Sound_TimerWorldRecordAll, SND_TIMER_WORLDRECORD_ALL, sizeof(SND_TIMER_WORLDRECORD_ALL));
-	PrepareSound(SND_TIMER_WORLDRECORD_ALL);
-	
-	GetConVarString(Sound_TimerPersonalBest, SND_TIMER_PERSONALBEST, sizeof(SND_TIMER_PERSONALBEST));
-	PrepareSound(SND_TIMER_PERSONALBEST);
+  GetConVarString(g_hTimerFinish, g_sTimerFinish, sizeof(g_sTimerFinish));
+  GetConVarString(g_hTimerPause, g_sTimerPause, sizeof(g_sTimerPause));
+  GetConVarString(g_hTimerResume, g_sTimerResume, sizeof(g_sTimerResume));
+  GetConVarString(g_hTimerWorldRecord, g_sTimerWorldRecord, sizeof(g_sTimerWorldRecord));
+  GetConVarString(g_hTimerWorldRecordAll, g_sTimerWorldRecordAll, sizeof(g_sTimerWorldRecordAll));
+  GetConVarString(g_hTimerPersonalBest, g_sTimerPersonalBest, sizeof(g_sTimerPersonalBest));
+
+  if(GetEngineVersion() == Engine_CSGO && StrContains(g_sTimerFinish, ".mp3", false) || GetEngineVersion() == Engine_CSS && StrContains(g_sTimerFinish, ".mp3", false) || StrContains(g_sTimerFinish, ".wav", false))
+  {
+    g_bTimerFinish = PrepareSound(g_sTimerFinish);
+  }
+  if(GetEngineVersion() == Engine_CSGO && StrContains(g_sTimerPause, ".mp3", false) || GetEngineVersion() == Engine_CSS && StrContains(g_sTimerPause, ".mp3", false) || StrContains(g_sTimerPause, ".wav", false))
+  {
+    g_bTimerPause = PrepareSound(g_sTimerPause);
+  }
+  if(GetEngineVersion() == Engine_CSGO && StrContains(g_sTimerResume, ".mp3", false) || GetEngineVersion() == Engine_CSS && StrContains(g_sTimerResume, ".mp3", false) || StrContains(g_sTimerResume, ".wav", false))
+  {
+    g_bTimerResume = PrepareSound(g_sTimerResume);
+  }
+  if(GetEngineVersion() == Engine_CSGO && StrContains(g_sTimerWorldRecord, ".mp3", false) || GetEngineVersion() == Engine_CSS && StrContains(g_sTimerWorldRecord, ".mp3", false) || StrContains(g_sTimerWorldRecord, ".wav", false))
+  {
+    g_bTimerWorldRecord = PrepareSound(g_sTimerWorldRecord);
+  }
+  if(GetEngineVersion() == Engine_CSGO && StrContains(g_sTimerWorldRecordAll, ".mp3", false) || GetEngineVersion() == Engine_CSS && StrContains(g_sTimerWorldRecordAll, ".mp3", false) || StrContains(g_sTimerWorldRecordAll, ".wav", false))
+  {
+    g_bTimerWorldRecordAll = PrepareSound(g_sTimerWorldRecordAll);
+  }
+  if(GetEngineVersion() == Engine_CSGO && StrContains(g_sTimerPersonalBest, ".mp3", false) || GetEngineVersion() == Engine_CSS && StrContains(g_sTimerPersonalBest, ".mp3", false) || StrContains(g_sTimerPersonalBest, ".wav", false))
+  {
+    g_bTimerPersonalBest = PrepareSound(g_sTimerPersonalBest);
+  }
 }
 
-public PrepareSound(String: sound[MAX_FILE_LEN])
+public bool:PrepareSound(String: sound[MAX_FILE_LEN])
 {
-	decl String:fileSound[MAX_FILE_LEN];
+  decl String:fileSound[MAX_FILE_LEN];
 
-	FormatEx(fileSound, MAX_FILE_LEN, "sound/%s", sound);
+  FormatEx(fileSound, MAX_FILE_LEN, "sound/%s", sound);
 
-	if (FileExists(fileSound))
-	{
-		PrecacheSoundAny(sound, true);
-		AddFileToDownloadsTable(fileSound);
-		Timer_LogTrace("[Sound] File '%s' added to downloads table.", fileSound);
-	}
+  if (FileExists(fileSound) && g_bTimerWorldRecord)
+  {
+    new bool:bReturn;
+    bReturn = PrecacheSoundAny(sound, true);
+    AddFileToDownloadsTable(fileSound);
+    Timer_LogTrace("[Sound] File '%s' added to downloads table.", fileSound);
+
+    return bReturn;
+  }
+  return false;
 }
 
 public OnTimerPaused(client)
 {
-	EmitSoundToClientAny(client, SND_TIMER_PAUSE);
+  if(g_bTimerPause)
+  {
+    EmitSoundToClientAny(client, g_sTimerPause);
+  }
 }
 
 public OnTimerResumed(client)
 {
-	EmitSoundToClientAny(client, SND_TIMER_RESUME);
+  if(g_bTimerResume)
+  {
+    EmitSoundToClientAny(client, g_sTimerResume);
+  }
 }
 
 public OnTimerWorldRecord(client)
 {
-	//Stop the sound first
-	EmitSoundToAllAny(SND_TIMER_WORLDRECORD_ALL, _, _, _, SND_STOPLOOPING);
-	
-	EmitSoundToAllAny(SND_TIMER_WORLDRECORD_ALL);
+  if(g_bTimerWorldRecordAll)
+  {
+    //Stop the sound first
+    EmitSoundToAllAny(g_sTimerWorldRecordAll, _, _, _, SND_STOPLOOPING);
+
+    EmitSoundToAllAny(g_sTimerWorldRecordAll);
+  }
 }
 
 public OnTimerPersonalRecord(client)
 {
-	EmitSoundToClientAny(client, SND_TIMER_PERSONALBEST);
+  if(g_bTimerPersonalBest)
+  {
+    EmitSoundToClientAny(client, g_sTimerPersonalBest);
+  }
 }
 
 public OnTimerRecord(client)
 {
-	EmitSoundToClientAny(client, SND_TIMER_FINISH);
+  if(g_bTimerFinish)
+  {
+    EmitSoundToClientAny(client, g_sTimerFinish);
+  }
 }
