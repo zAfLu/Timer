@@ -5,15 +5,15 @@
 
 #pragma semicolon 1
 
-#define PL_VERSION		"2.3.0.0"
+#define PL_VERSION		"2.5.0.0"
 
 /*** SETTINGS ***/
 
 //Uncomment this to use colors.inc and disable morecolors.inc
-//#define LEGACY_COLORS "CS:GO Color Support"
+#define LEGACY_COLORS "CS:GO Color Support"
 
 #define MAX_STYLES	16 //Max number of styles (default 32 ID:0-31)
-#define MAX_TRACKS	10
+#define MAX_TRACKS	6 // Normal+Bonus1-5
 
 //Max. number of door/button based bhop blocks handled in a map
 #define MAX_BHOPBLOCKS	1024
@@ -23,7 +23,10 @@
 //Tracks
 #define TRACK_NORMAL 				0
 #define TRACK_BONUS 				1
-#define TRACK_SHORT 				2
+#define TRACK_BONUS2 				2
+#define TRACK_BONUS3 				3
+#define TRACK_BONUS4 				4
+#define TRACK_BONUS5 				5
 
 //Colors Includes
 #if defined LEGACY_COLORS
@@ -52,11 +55,6 @@
 #define SPECMODE_FIRSTPERSON 			4
 #define SPECMODE_3RDPERSON 				5
 #define SPECMODE_FREELOOK	 			6
-
-//Start commands
-#define SCMD_START						0
-#define SCMD_RESTART					1
-#define SCMD_BONUSSTART					2
 
 //Func_ Flags
 #define SF_BUTTON_DONTMOVE				(1<<0)		//dont move when fired (func_button)

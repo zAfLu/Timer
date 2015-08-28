@@ -8,8 +8,16 @@
 #define LEVEL_END					999
 #define LEVEL_BONUS_START			1001
 #define LEVEL_BONUS_END				1999
+#define LEVEL_BONUS2_START			2001
+#define LEVEL_BONUS2_END			2999
+#define LEVEL_BONUS3_START			3001
+#define LEVEL_BONUS3_END			3999
+#define LEVEL_BONUS4_START			4001
+#define LEVEL_BONUS4_END			4999
+#define LEVEL_BONUS5_START			5001
+#define LEVEL_BONUS5_END			5999
 
-// 38 zones types
+// 60 zones types
 enum MapZoneType
 {
     ZtStart, //0
@@ -39,7 +47,7 @@ enum MapZoneType
 	ZtNoBoost, //24
 	ZtRestartNormalTimer, //25
 	ZtRestartBonusTimer, //26
-	ZtShortEnd, //27
+	ZtShortEnd, //27 - Removed
 	ZtPushNorth, //28
 	ZtPushSouth, //29
 	ZtPushWest, //30
@@ -55,7 +63,25 @@ enum MapZoneType
 	ZtBlockAttack, //40
 	ZtCheckpoint, //41
 	ZtBonusCheckpoint, //42
-	ZtAntiNoclip //43
+	ZtAntiNoclip, //43
+    ZtBonus2Start, //44
+    ZtBonus2End, //45
+    ZtBonus2Level, //46
+	ZtBonus2Checkpoint, //47
+    ZtBonus3Start, //48
+    ZtBonus3End, //49
+    ZtBonus3Level, //50
+	ZtBonus3Checkpoint, //51
+    ZtBonus4Start, //52
+    ZtBonus4End, //53
+    ZtBonus4Level, //54
+	ZtBonus4Checkpoint, //55
+    ZtBonus5Start, //56
+    ZtBonus5End, //57
+    ZtBonus5Level, //58
+	ZtBonus5Checkpoint, //59
+	ZtBhop, //60
+	ZtAntiCp //61
 }
 
 /* Forwards */
@@ -217,4 +243,11 @@ public __pl_timer_mapzones_SetNTVOptional() {
 	MarkNativeAsOptional("Timer_SetIgnoreEndTouchStart");
 	MarkNativeAsOptional("Timer_IsPlayerTouchingZoneType");
 	MarkNativeAsOptional("Timer_GetMapzoneCount");
+}
+
+stock bool:Timer_IsPlayerTouchingStartZone(client)
+{
+	if(Timer_IsPlayerTouchingZoneType(client, ZtStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonusStart) || Timer_IsPlayerTouchingZoneType(client, ZtBonus2Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus3Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus4Start) || Timer_IsPlayerTouchingZoneType(client, ZtBonus5Start))
+		return true;
+	return false;
 }

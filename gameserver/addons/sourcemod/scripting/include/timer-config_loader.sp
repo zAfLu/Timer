@@ -54,7 +54,6 @@ enum TimerSettings
 	Float:StuckPenaltyTime,
 	bool:AllowMultipleStart,
 	bool:AllowMultipleEnd,
-	bool:AllowMultipleShortEnd,
 	bool:AllowMultipleBonusStart,
 	bool:AllowMultipleBonusEnd,
 	String:NPC_Path[32],
@@ -173,7 +172,6 @@ enum TimerSettings
 	Float:Tier10Scale,
 	
 	//World Record
-	bool:ShortWrEnable,
 	bool:BonusWrEnable,
 	
 	//Weapons
@@ -198,7 +196,10 @@ enum Styles
 	String:StyleQuickCommand[32],
 	String:StyleQuickWrCommand[32],
 	String:StyleQuickBonusWrCommand[32],
-	String:StyleQuickShortWrCommand[32],
+	String:StyleQuickBonus2WrCommand[32],
+	String:StyleQuickBonus3WrCommand[32],
+	String:StyleQuickBonus4WrCommand[32],
+	String:StyleQuickBonus5WrCommand[32],
 	String:StyleDesc[128],
 	
 	//HUD
@@ -235,6 +236,7 @@ enum Styles
 	Float:StyleHoverScale,
 	Float:StyleMaxSpeed,
 	StyleAntiBhop,
+	bool:StyleStartZoneAntiBhop,
 	bool:StyleRealBhop,
 	StyleRealBhopMaxFrames,
 	Float:StyleRealBhopFramePenalty,
@@ -350,7 +352,6 @@ stock LoadTimerSettings()
 			g_Settings[StuckPenaltyTime] = KvGetFloat(hKv, "stuck_penalty_time", 10.0);
 			g_Settings[AllowMultipleStart] = bool:KvGetNum(hKv, "allow_multiple_start", 0);
 			g_Settings[AllowMultipleEnd] = bool:KvGetNum(hKv, "allow_multiple_end", 0);
-			g_Settings[AllowMultipleShortEnd] = bool:KvGetNum(hKv, "allow_multiple_shortend", 0);
 			g_Settings[AllowMultipleBonusStart] = bool:KvGetNum(hKv, "allow_multiple_bonusstart", 0);
 			g_Settings[AllowMultipleBonusEnd] = bool:KvGetNum(hKv, "allow_multiple_bonusend", 0);
 			g_Settings[ZoneResize] = KvGetFloat(hKv, "trigger_resize", 16.0);
@@ -471,7 +472,6 @@ stock LoadTimerSettings()
 		}
 		else if(StrEqual(sSectionName, "Worldrecord", false))
 		{
-			g_Settings[ShortWrEnable] = bool:KvGetNum(hKv, "worldrecord_shortwr_enable", 1);
 			g_Settings[BonusWrEnable] = bool:KvGetNum(hKv, "worldrecord_bonuswr_enable", 1);
 		}
 		else if(StrEqual(sSectionName, "Weapons", false))
@@ -593,6 +593,7 @@ stock LoadPhysics()
 			g_Physics[g_StyleCount][StyleQuakeBhop] = KvGetNum(hKv, "quake_bhop", 0);
 			g_Physics[g_StyleCount][StyleStrafeBoost] = KvGetNum(hKv, "strafe_boost", 0);
 			g_Physics[g_StyleCount][StyleAntiBhop] = KvGetNum(hKv, "anti_bhop", 0);
+			g_Physics[g_StyleCount][StyleStartZoneAntiBhop] = bool:KvGetNum(hKv, "anti_bhop_start", 0);
 			g_Physics[g_StyleCount][StyleRealBhop] = bool:KvGetNum(hKv, "real_bhop", 0);
 			g_Physics[g_StyleCount][StyleRealBhopMaxFrames] = KvGetNum(hKv, "real_bhop_maxframes", 11);
 			g_Physics[g_StyleCount][StyleRealBhopFramePenalty] = KvGetFloat(hKv, "real_bhop_framepenalty", 0.78);
@@ -602,7 +603,10 @@ stock LoadPhysics()
 			KvGetString(hKv, "chat_command", g_Physics[g_StyleCount][StyleQuickCommand], 32);
 			KvGetString(hKv, "chat_wr_command", g_Physics[g_StyleCount][StyleQuickWrCommand], 32);
 			KvGetString(hKv, "chat_bwr_command", g_Physics[g_StyleCount][StyleQuickBonusWrCommand], 32);
-			KvGetString(hKv, "chat_swr_command", g_Physics[g_StyleCount][StyleQuickShortWrCommand], 32);
+			KvGetString(hKv, "chat_b2wr_command", g_Physics[g_StyleCount][StyleQuickBonus2WrCommand], 32);
+			KvGetString(hKv, "chat_b3wr_command", g_Physics[g_StyleCount][StyleQuickBonus3WrCommand], 32);
+			KvGetString(hKv, "chat_b4wr_command", g_Physics[g_StyleCount][StyleQuickBonus4WrCommand], 32);
+			KvGetString(hKv, "chat_b5wr_command", g_Physics[g_StyleCount][StyleQuickBonus5WrCommand], 32);
 			KvGetString(hKv, "exec_onfinish", g_Physics[g_StyleCount][StyleOnFinishExec], 128);
 			KvGetString(hKv, "desc", g_Physics[g_StyleCount][StyleDesc], 128);
 			

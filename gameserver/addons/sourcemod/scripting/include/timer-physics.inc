@@ -42,6 +42,9 @@ native Timer_GetCurrentSpeed(client, &Float:speed);
 native Timer_GetMaxSpeed(client, &Float:maxspeed);
 native Timer_GetAvgSpeed(client, &Float:avgspeed);
 native Timer_ResetAccuracy(client);
+
+native Timer_SaveLastJumps(client);
+native Timer_RestoreLastJumps(client);
 	
 public SharedPlugin:__pl_timer_physics = 
 {
@@ -64,4 +67,6 @@ public __pl_timer_physics_SetNTVOptional()
 	MarkNativeAsOptional("Timer_GetMaxSpeed");
 	MarkNativeAsOptional("Timer_GetAvgSpeed");
 	MarkNativeAsOptional("Timer_ResetAccuracy");
+	MarkNativeAsOptional("Timer_SaveLastJumps");
+	MarkNativeAsOptional("Timer_RestoreLastJumps");
 }

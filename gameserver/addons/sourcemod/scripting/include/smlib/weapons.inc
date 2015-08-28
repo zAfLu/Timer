@@ -53,7 +53,7 @@ stock Weapon_IsValid(weapon)
 	if (!IsValidEdict(weapon)) {
 		return false;
 	}
-
+	
 	return Entity_ClassNameMatches(weapon, "weapon_", true);
 }
 
@@ -208,6 +208,17 @@ stock Weapon_GetPrimaryAmmoType(weapon)
 }
 
 /*
+ * Sets the primary ammo Type (int offset)
+ * 
+ * @param weapon		Weapon Entity.
+ * @param type			Primary ammo type value.
+ */
+stock Weapon_SetPrimaryAmmoType(weapon,type)
+{
+	return SetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoType", type);
+}
+
+/*
  * Gets the secondary ammo Type (int offset)
  * 
  * @param weapon		Weapon Entity.
@@ -216,6 +227,17 @@ stock Weapon_GetPrimaryAmmoType(weapon)
 stock Weapon_GetSecondaryAmmoType(weapon)
 {
 	return GetEntProp(weapon, Prop_Data, "m_iSecondaryAmmoType");
+}
+
+/*
+ * Sets the secondary ammo Type (int offset)
+ * 
+ * @param weapon		Weapon Entity.
+ * @param type			Secondary ammo type value.
+ */
+stock Weapon_SetSecondaryAmmoType(weapon,type)
+{
+	return SetEntProp(weapon, Prop_Data, "m_iSecondaryAmmoType", type);
 }
 
 /*
@@ -286,7 +308,10 @@ stock Weapon_SetClips(weapon, primary, secondary)
  */
 stock Weapon_GetPrimaryAmmoCount(weapon)
 {
-	return GetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoCount");
+	if(GetEngineVersion() != Engine_CSGO)
+		return GetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoCount");
+	else
+		return GetEntProp(weapon, Prop_Data, "m_iPrimaryReserveAmmoCount");
 }
 
 /*
@@ -301,7 +326,10 @@ stock Weapon_GetPrimaryAmmoCount(weapon)
  */
 stock Weapon_SetPrimaryAmmoCount(weapon, value)
 {
-	SetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoCount", value);
+	if(GetEngineVersion() != Engine_CSGO)
+		SetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoCount", value);
+	else
+		SetEntProp(weapon, Prop_Data, "m_iPrimaryReserveAmmoCount", value);
 }
 
 /*
@@ -315,7 +343,10 @@ stock Weapon_SetPrimaryAmmoCount(weapon, value)
  */
 stock Weapon_GetSecondaryAmmoCount(weapon)
 {
-	return GetEntProp(weapon, Prop_Data, "m_iSecondaryAmmoCount");
+	if(GetEngineVersion() != Engine_CSGO)
+		return GetEntProp(weapon, Prop_Data, "m_iSecondaryAmmoCount");
+	else
+		SetEntProp(weapon, Prop_Data, "m_iSecondaryReserveAmmoCount", value);
 }
 
 /*
@@ -330,7 +361,10 @@ stock Weapon_GetSecondaryAmmoCount(weapon)
  */
 stock Weapon_SetSecondaryAmmoCount(weapon, value)
 {
-	SetEntProp(weapon, Prop_Data, "m_iSecondaryAmmoCount", value);
+	if(GetEngineVersion() != Engine_CSGO)
+		SetEntProp(weapon, Prop_Data, "m_iSecondaryAmmoCount", value);
+	else
+		SetEntProp(weapon, Prop_Data, "m_iSecondaryReserveAmmoCount", value);
 }
 
 /*
