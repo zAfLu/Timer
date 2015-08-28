@@ -49,10 +49,7 @@ public OnTimerRecord(client, track, style, Float:time, Float:lasttime, currentra
 	if(IsFakeClient(client))
 		return;
 	
-	new tier;
-	if(track == TRACK_SHORT) 
-		tier = 1;
-	else tier = Timer_GetTier(track);
+	new tier = Timer_GetTier(track);
 	
 	if(Timer_IsStyleRanked(style))
 	{

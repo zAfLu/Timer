@@ -117,7 +117,7 @@ public OnPluginStart()
 		SetFailState("Check timer error logs.");
 		return;
 	}
-	
+
 	g_timerCore = LibraryExists("timer");
 	g_timerPhysics = LibraryExists("timer-physics");
 	g_timerMapzones = LibraryExists("timer-mapzones");
@@ -126,31 +126,31 @@ public OnPluginStart()
 	g_timerRankings = LibraryExists("timer-rankings");
 	g_timerStrafes = LibraryExists("timer-strafes");
 	g_timerWorldRecord = LibraryExists("timer-worldrecord");
-	
+
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	LoadTranslations("timer.phrases");
-	
-	if(g_Settings[HUDMasterEnable]) 
+
+	if(g_Settings[HUDMasterEnable])
 	{
 		HookEvent("player_jump", Event_PlayerJump);
-		
+
 		HookEvent("player_death", Event_Reset);
 		HookEvent("player_team", Event_Reset);
 		HookEvent("player_spawn", Event_Reset);
 		HookEvent("player_disconnect", Event_Reset);
-		
+
 		RegConsoleCmd("sm_hidemyass", Cmd_HideMyAss);
 		RegConsoleCmd("sm_hud", MenuHud);
 		RegConsoleCmd("sm_hudmenu", MenuHud);
 		RegConsoleCmd("sm_hudstyle", MenuHud);
 		RegConsoleCmd("sm_specinfo", Cmd_SpecInfo);
-		
+
 		g_cvarTimeLimit = FindConVar("mp_timelimit");
-		
+
 		AutoExecConfig(true, "timer/timer-hud");
-		
+
 		//cookies yummy :)
 		cookieHudPref = RegClientCookie("timer_hud_master", "Turn on or off all hud components", CookieAccess_Private);
 		cookieHudMainPref = RegClientCookie("timer_hud_main", "Turn on or off main hud components", CookieAccess_Private);
@@ -182,31 +182,31 @@ public OnLibraryAdded(const String:name[])
 	if (StrEqual(name, "timer"))
 	{
 		g_timerCore = true;
-	}	
+	}
 	else if (StrEqual(name, "timer-physics"))
 	{
 		g_timerPhysics = true;
-	}	
+	}
 	else if (StrEqual(name, "timer-mapzones"))
 	{
 		g_timerMapzones = true;
-	}		
+	}
 	else if (StrEqual(name, "timer-ljstats"))
 	{
 		g_timerLjStats = true;
-	}	
+	}
 	else if (StrEqual(name, "timer-maptier"))
 	{
 		g_timerMapTier = true;
-	}	
+	}
 	else if (StrEqual(name, "timer-rankings"))
 	{
 		g_timerRankings = true;
-	}		
+	}
 	else if (StrEqual(name, "timer-strafes"))
 	{
 		g_timerStrafes = true;
-	}	
+	}
 	else if (StrEqual(name, "timer-worldrecord"))
 	{
 		g_timerWorldRecord = true;
@@ -214,57 +214,57 @@ public OnLibraryAdded(const String:name[])
 }
 
 public OnLibraryRemoved(const String:name[])
-{	
+{
 	if (StrEqual(name, "timer"))
 	{
 		g_timerCore = false;
-	}	
+	}
 	else if (StrEqual(name, "timer-physics"))
 	{
 		g_timerPhysics = false;
-	}	
+	}
 	else if (StrEqual(name, "timer-mapzones"))
 	{
 		g_timerMapzones = false;
-	}		
+	}
 	else if (StrEqual(name, "timer-ljstats"))
 	{
 		g_timerLjStats = false;
-	}	
+	}
 	else if (StrEqual(name, "timer-maptier"))
 	{
 		g_timerMapTier = false;
-	}	
+	}
 	else if (StrEqual(name, "timer-rankings"))
 	{
 		g_timerRankings = false;
-	}	
+	}
 	else if (StrEqual(name, "timer-strafes"))
 	{
 		g_timerStrafes = false;
-	}	
+	}
 	else if (StrEqual(name, "timer-worldrecord"))
 	{
 		g_timerWorldRecord = false;
 	}
 }
 
-public OnMapStart() 
+public OnMapStart()
 {
 	for (new client = 1; client <= MaxClients; client++)
 	{
 		g_hDelayJump[client] = INVALID_HANDLE;
 	}
-	
+
 	GetCurrentMap(g_currentMap, sizeof(g_currentMap));
-	
+
 	if(GetEngineVersion() == Engine_CSS)
 	{
 		CreateTimer(0.1, HUDTimer_CSS, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 	}
-	
+
 	RestartMapTimer();
-	
+
 	LoadPhysics();
 	LoadTimerSettings();
 }
@@ -293,7 +293,7 @@ public OnClientCookiesCached(client)
 	// Initializations and preferences loading
 	if(IsClientInGame(client) && !IsFakeClient(client))
 	{
-		loadClientCookiesFor(client);	
+		loadClientCookiesFor(client);
 	}
 }
 
@@ -301,9 +301,9 @@ loadClientCookiesFor(client)
 {
 	if(cookieHudPref == INVALID_HANDLE)
 		return;
-	
+
 	decl String:buffer[5];
-	
+
 	//Master HUD
 	GetClientCookie(client, cookieHudPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
@@ -317,14 +317,14 @@ loadClientCookiesFor(client)
 	{
 		hudSettings[Main][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Time?
 	GetClientCookie(client, cookieHudMainTimePref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[Time][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Jumps?
 	GetClientCookie(client, cookieHudMainJumpsPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
@@ -338,112 +338,112 @@ loadClientCookiesFor(client)
 	{
 		hudSettings[Speed][client] = StringToInt(buffer);
 	}
-	
+
 	//Show SpeedMax?
 	GetClientCookie(client, cookieHudMainSpeedMaxPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[SpeedMax][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Strafes?
 	GetClientCookie(client, cookieHudMainStrafesPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[Strafes][client] = StringToInt(buffer);
 	}
-	
+
 	//Show JumpAcc?
 	GetClientCookie(client, cookieHudMainJumpsAccPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[JumpAcc][client] = StringToInt(buffer);
 	}
-	
+
 	//Show SideHUD?
 	GetClientCookie(client, cookieHudSidePref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[Side][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side Map?
 	GetClientCookie(client, cookieHudSideMapPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[Map][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side Mode?
 	GetClientCookie(client, cookieHudSideModePref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[Mode][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side WR Holder?
 	GetClientCookie(client, cookieHudSideWRHolderPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[WRHolder][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side WR?
 	GetClientCookie(client, cookieHudSideWRPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[WR][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side Rank?
 	GetClientCookie(client, cookieHudSideRankPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[Rank][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side PB?
 	GetClientCookie(client, cookieHudSidePBPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[PB][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side TTWR?
 	GetClientCookie(client, cookieHudSideTTWRPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[TTWR][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side Keys?
 	GetClientCookie(client, cookieHudSideKeysPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[Keys][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side Spec?
 	GetClientCookie(client, cookieHudSideSpecPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[Spec][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side Steam?
 	GetClientCookie(client, cookieHudSideSteamPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[Steam][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side Level?
 	GetClientCookie(client, cookieHudSideLevelPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
 	{
 		hudSettings[Level][client] = StringToInt(buffer);
 	}
-	
+
 	//Show Side Timeleft?
 	GetClientCookie(client, cookieHudSideTimeleftPref, buffer, 5);
 	if(!StrEqual(buffer, ""))
@@ -472,362 +472,362 @@ public MenuHandlerHud(Handle:menu, MenuAction:action, client, itemNum)
 				if (hudSettings[Master][client] == 0)
 				{
 					hudSettings[Master][client] = 1;
-				} 
-				else if (hudSettings[Master][client] == 1) 
+				}
+				else if (hudSettings[Master][client] == 1)
 				{
 					hudSettings[Master][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Master][client], buffer, 5);
-				SetClientCookie(client, cookieHudPref, buffer);		
+				SetClientCookie(client, cookieHudPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "main"))
 			{
 				if (hudSettings[Main][client] == 0)
 				{
 					hudSettings[Main][client] = 1;
-				} 
-				else if (hudSettings[Main][client] == 1) 
+				}
+				else if (hudSettings[Main][client] == 1)
 				{
 					hudSettings[Main][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Main][client], buffer, 5);
-				SetClientCookie(client, cookieHudMainPref, buffer);		
+				SetClientCookie(client, cookieHudMainPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "time"))
 			{
 				if (hudSettings[Time][client] == 0)
 				{
 					hudSettings[Time][client] = 1;
-				} 
-				else if (hudSettings[Time][client] == 1) 
+				}
+				else if (hudSettings[Time][client] == 1)
 				{
 					hudSettings[Time][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Time][client], buffer, 5);
-				SetClientCookie(client, cookieHudMainTimePref, buffer);		
+				SetClientCookie(client, cookieHudMainTimePref, buffer);
 			}
-			
+
 			if(StrEqual(info, "jumps"))
 			{
 				if (hudSettings[Jumps][client] == 0)
 				{
 					hudSettings[Jumps][client] = 1;
-				} 
-				else if (hudSettings[Jumps][client] == 1) 
+				}
+				else if (hudSettings[Jumps][client] == 1)
 				{
 					hudSettings[Jumps][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Jumps][client], buffer, 5);
-				SetClientCookie(client, cookieHudMainJumpsPref, buffer);		
+				SetClientCookie(client, cookieHudMainJumpsPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "speed"))
 			{
 				if (hudSettings[Speed][client] == 0)
 				{
 					hudSettings[Speed][client] = 1;
-				} 
-				else if (hudSettings[Speed][client] == 1) 
+				}
+				else if (hudSettings[Speed][client] == 1)
 				{
 					hudSettings[Speed][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Speed][client], buffer, 5);
-				SetClientCookie(client, cookieHudMainSpeedPref, buffer);		
+				SetClientCookie(client, cookieHudMainSpeedPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "speedmax"))
 			{
 				if (hudSettings[SpeedMax][client] == 0)
 				{
 					hudSettings[SpeedMax][client] = 1;
-				} 
-				else if (hudSettings[SpeedMax][client] == 1) 
+				}
+				else if (hudSettings[SpeedMax][client] == 1)
 				{
 					hudSettings[SpeedMax][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[SpeedMax][client], buffer, 5);
-				SetClientCookie(client, cookieHudMainSpeedMaxPref, buffer);		
+				SetClientCookie(client, cookieHudMainSpeedMaxPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "strafes"))
 			{
 				if (hudSettings[Strafes][client] == 0)
 				{
 					hudSettings[Strafes][client] = 1;
-				} 
-				else if (hudSettings[Strafes][client] == 1) 
+				}
+				else if (hudSettings[Strafes][client] == 1)
 				{
 					hudSettings[Strafes][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Strafes][client], buffer, 5);
-				SetClientCookie(client, cookieHudMainStrafesPref, buffer);		
+				SetClientCookie(client, cookieHudMainStrafesPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "jumpacc"))
 			{
 				if (hudSettings[JumpAcc][client] == 0)
 				{
 					hudSettings[JumpAcc][client] = 1;
-				} 
-				else if (hudSettings[JumpAcc][client] == 1) 
+				}
+				else if (hudSettings[JumpAcc][client] == 1)
 				{
 					hudSettings[JumpAcc][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[JumpAcc][client], buffer, 5);
-				SetClientCookie(client, cookieHudMainJumpsAccPref, buffer);		
+				SetClientCookie(client, cookieHudMainJumpsAccPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "side"))
 			{
 				if (hudSettings[Side][client] == 0)
 				{
 					hudSettings[Side][client] = 1;
-				} 
-				else if (hudSettings[Side][client] == 1) 
+				}
+				else if (hudSettings[Side][client] == 1)
 				{
 					hudSettings[Side][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Side][client], buffer, 5);
-				SetClientCookie(client, cookieHudSidePref, buffer);		
+				SetClientCookie(client, cookieHudSidePref, buffer);
 			}
-			
+
 			if(StrEqual(info, "map"))
 			{
 				if (hudSettings[Map][client] == 0)
 				{
 					hudSettings[Map][client] = 1;
-				} 
-				else if (hudSettings[Map][client] == 1) 
+				}
+				else if (hudSettings[Map][client] == 1)
 				{
 					hudSettings[Map][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Map][client], buffer, 5);
-				SetClientCookie(client, cookieHudSideMapPref, buffer);		
+				SetClientCookie(client, cookieHudSideMapPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "mode"))
 			{
 				if (hudSettings[Mode][client] == 0)
 				{
 					hudSettings[Mode][client] = 1;
-				} 
-				else if (hudSettings[Mode][client] == 1) 
+				}
+				else if (hudSettings[Mode][client] == 1)
 				{
 					hudSettings[Mode][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Mode][client], buffer, 5);
-				SetClientCookie(client, cookieHudSideModePref, buffer);		
+				SetClientCookie(client, cookieHudSideModePref, buffer);
 			}
-			
+
 			if(StrEqual(info, "wrholder"))
 			{
 				if (hudSettings[WRHolder][client] == 0)
 				{
 					hudSettings[WRHolder][client] = 1;
-				} 
-				else if (hudSettings[WRHolder][client] == 1) 
+				}
+				else if (hudSettings[WRHolder][client] == 1)
 				{
 					hudSettings[WRHolder][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[WRHolder][client], buffer, 5);
-				SetClientCookie(client, cookieHudSideWRHolderPref, buffer);		
+				SetClientCookie(client, cookieHudSideWRHolderPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "wr"))
 			{
 				if (hudSettings[WR][client] == 0)
 				{
 					hudSettings[WR][client] = 1;
-				} 
-				else if (hudSettings[WR][client] == 1) 
+				}
+				else if (hudSettings[WR][client] == 1)
 				{
 					hudSettings[WR][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[WR][client], buffer, 5);
-				SetClientCookie(client, cookieHudSideWRPref, buffer);		
+				SetClientCookie(client, cookieHudSideWRPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "level"))
 			{
 				if (hudSettings[Level][client] == 0)
 				{
 					hudSettings[Level][client] = 1;
-				} 
-				else if (hudSettings[Level][client] == 1) 
+				}
+				else if (hudSettings[Level][client] == 1)
 				{
 					hudSettings[Level][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Level][client], buffer, 5);
-				SetClientCookie(client, cookieHudSideLevelPref, buffer);		
+				SetClientCookie(client, cookieHudSideLevelPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "timeleft"))
 			{
 				if (hudSettings[Timeleft][client] == 0)
 				{
 					hudSettings[Timeleft][client] = 1;
-				} 
-				else if (hudSettings[Timeleft][client] == 1) 
+				}
+				else if (hudSettings[Timeleft][client] == 1)
 				{
 					hudSettings[Timeleft][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Timeleft][client], buffer, 5);
-				SetClientCookie(client, cookieHudSideTimeleftPref, buffer);		
+				SetClientCookie(client, cookieHudSideTimeleftPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "rank"))
 			{
 				if (hudSettings[Rank][client] == 0)
 				{
 					hudSettings[Rank][client] = 1;
-				} 
-				else if (hudSettings[Rank][client] == 1) 
+				}
+				else if (hudSettings[Rank][client] == 1)
 				{
 					hudSettings[Rank][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Rank][client], buffer, 5);
-				SetClientCookie(client, cookieHudSideRankPref, buffer);		
+				SetClientCookie(client, cookieHudSideRankPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "pb"))
 			{
 				if (hudSettings[PB][client] == 0)
 				{
 					hudSettings[PB][client] = 1;
-				} 
-				else if (hudSettings[PB][client] == 1) 
+				}
+				else if (hudSettings[PB][client] == 1)
 				{
 					hudSettings[PB][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[PB][client], buffer, 5);
-				SetClientCookie(client, cookieHudSidePBPref, buffer);		
+				SetClientCookie(client, cookieHudSidePBPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "ttwr"))
 			{
 				if (hudSettings[TTWR][client] == 0)
 				{
 					hudSettings[TTWR][client] = 1;
-				} 
-				else if (hudSettings[TTWR][client] == 1) 
+				}
+				else if (hudSettings[TTWR][client] == 1)
 				{
 					hudSettings[TTWR][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[TTWR][client], buffer, 5);
-				SetClientCookie(client, cookieHudSideTTWRPref, buffer);		
+				SetClientCookie(client, cookieHudSideTTWRPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "keys"))
 			{
 				if (hudSettings[Keys][client] == 0)
 				{
 					hudSettings[Keys][client] = 1;
-				} 
-				else if (hudSettings[Keys][client] == 1) 
+				}
+				else if (hudSettings[Keys][client] == 1)
 				{
 					hudSettings[Keys][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Keys][client], buffer, 5);
-				SetClientCookie(client, cookieHudSideKeysPref, buffer);		
+				SetClientCookie(client, cookieHudSideKeysPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "spec"))
 			{
 				if (hudSettings[Spec][client] == 0)
 				{
 					hudSettings[Spec][client] = 1;
-				} 
-				else if (hudSettings[Spec][client] == 1) 
+				}
+				else if (hudSettings[Spec][client] == 1)
 				{
 					hudSettings[Spec][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Spec][client], buffer, 5);
-				SetClientCookie(client, cookieHudSideSpecPref, buffer);		
+				SetClientCookie(client, cookieHudSideSpecPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "steam"))
 			{
 				if (hudSettings[Steam][client] == 0)
 				{
 					hudSettings[Steam][client] = 1;
-				} 
-				else if (hudSettings[Steam][client] == 1) 
+				}
+				else if (hudSettings[Steam][client] == 1)
 				{
 					hudSettings[Steam][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Steam][client], buffer, 5);
-				SetClientCookie(client, cookieHudSideSteamPref, buffer);		
+				SetClientCookie(client, cookieHudSideSteamPref, buffer);
 			}
-			
+
 			if(StrEqual(info, "points"))
 			{
 				if (hudSettings[Points][client] == 0)
 				{
 					hudSettings[Points][client] = 1;
-				} 
-				else if (hudSettings[Points][client] == 1) 
+				}
+				else if (hudSettings[Points][client] == 1)
 				{
 					hudSettings[Points][client] = 0;
 				}
-				
+
 				decl String:buffer[5];
 				IntToString(hudSettings[Points][client], buffer, 5);
-				SetClientCookie(client, cookieHudSidePointsPref, buffer);		
+				SetClientCookie(client, cookieHudSidePointsPref, buffer);
 			}
 		}
 		if(IsClientInGame(client)) ShowHudMenu(client, GetMenuSelectionPosition());
-	} 
+	}
 	else if(action == MenuAction_End)
 	{
 		CloseHandle(menu);
 	}
-		
+
 }
- 
+
 //  This creates the Hud Menu
 public Action:MenuHud(client, args)
 {
@@ -854,268 +854,268 @@ ShowHudMenu(client, start_item)
 	{
 		new Handle:menu = CreateMenu(MenuHandlerHud);
 		decl String:buffer[100];
-		
+
 		FormatEx(buffer, sizeof(buffer), "Custom Hud Menu");
 		SetMenuTitle(menu, buffer);
-		
+
 		if(hudSettings[Master][client] == 0)
 		{
-			AddMenuItem(menu, "master", "Enable HUD Master Switch");	
+			AddMenuItem(menu, "master", "Enable HUD Master Switch");
 		}
 		else
 		{
-			AddMenuItem(menu, "master", "Disable HUD Master Switch");	
+			AddMenuItem(menu, "master", "Disable HUD Master Switch");
 		}
-		
+
 		if(g_Settings[HUDCenterEnable])
 		{
 			if(hudSettings[Main][client] == 0)
 			{
-				AddMenuItem(menu, "main", "Enable Center HUD");	
+				AddMenuItem(menu, "main", "Enable Center HUD");
 			}
 			else
 			{
-				AddMenuItem(menu, "main", "Disable Center HUD");	
+				AddMenuItem(menu, "main", "Disable Center HUD");
 			}
 		}
-		
+
 		if(g_Settings[HUDSideEnable])
 		{
 			if(hudSettings[Side][client] == 0)
 			{
-				AddMenuItem(menu, "side", "Enable Side HUD");	
+				AddMenuItem(menu, "side", "Enable Side HUD");
 			}
 			else
 			{
-				AddMenuItem(menu, "side", "Disable Side HUD");	
+				AddMenuItem(menu, "side", "Disable Side HUD");
 			}
 		}
-		
+
 		if(hudSettings[Time][client] == 0)
 		{
-			AddMenuItem(menu, "time", "Enable Time");	
+			AddMenuItem(menu, "time", "Enable Time");
 		}
 		else
 		{
-			AddMenuItem(menu, "time", "Disable Time");	
+			AddMenuItem(menu, "time", "Disable Time");
 		}
-	
+
 		if(g_Settings[HUDJumpsEnable])
 		{
 			if(hudSettings[Jumps][client] == 0)
 			{
-				AddMenuItem(menu, "jumps", "Enable Jumps");	
+				AddMenuItem(menu, "jumps", "Enable Jumps");
 			}
 			else
 			{
-				AddMenuItem(menu, "jumps", "Disable Jumps");	
+				AddMenuItem(menu, "jumps", "Disable Jumps");
 			}
 		}
-	
+
 		if(g_Settings[HUDSpeedEnable])
 		{
 			if(hudSettings[Speed][client] == 0)
 			{
-				AddMenuItem(menu, "speed", "Enable Speed");	
+				AddMenuItem(menu, "speed", "Enable Speed");
 			}
 			else
 			{
-				AddMenuItem(menu, "speed", "Disable Speed");	
+				AddMenuItem(menu, "speed", "Disable Speed");
 			}
 		}
-		
+
 		if(g_Settings[HUDSpeedMaxEnable])
 		{
 			if(hudSettings[SpeedMax][client] == 0)
 			{
-				AddMenuItem(menu, "speedmax", "Enable Max Speed");	
+				AddMenuItem(menu, "speedmax", "Enable Max Speed");
 			}
 			else
 			{
-				AddMenuItem(menu, "speedmax", "Disable Max Speed");	
+				AddMenuItem(menu, "speedmax", "Disable Max Speed");
 			}
 		}
-		
+
 		if(g_Settings[HUDStrafesEnable])
 		{
 			if(hudSettings[Strafes][client] == 0)
 			{
-				AddMenuItem(menu, "strafes", "Enable Strafe Counter");	
+				AddMenuItem(menu, "strafes", "Enable Strafe Counter");
 			}
 			else
 			{
-				AddMenuItem(menu, "strafes", "Disable Strafe Counter");	
+				AddMenuItem(menu, "strafes", "Disable Strafe Counter");
 			}
 		}
-		
+
 		if(g_Settings[HUDJumpAccEnable])
 		{
 			if(hudSettings[JumpAcc][client] == 0)
 			{
-				AddMenuItem(menu, "jumpacc", "Enable Jump Accuracy");	
+				AddMenuItem(menu, "jumpacc", "Enable Jump Accuracy");
 			}
 			else
 			{
-				AddMenuItem(menu, "jumpacc", "Disable Jump Accuracy");	
+				AddMenuItem(menu, "jumpacc", "Disable Jump Accuracy");
 			}
 		}
-		
+
 		if(g_Settings[HUDSpeclistEnable])
 			{
 			if(hudSettings[Spec][client] == 0)
 			{
-				AddMenuItem(menu, "spec", "Enable Spec List[SideHUD]");	
+				AddMenuItem(menu, "spec", "Enable Spec List[SideHUD]");
 			}
 			else
 			{
-				AddMenuItem(menu, "spec", "Disable Spec List[SideHUD]");	
+				AddMenuItem(menu, "spec", "Disable Spec List[SideHUD]");
 			}
 		}
-		
+
 		if(g_Settings[HUDPointsEnable])
 			{
 			if(hudSettings[Points][client] == 0)
 			{
-				AddMenuItem(menu, "points", "Enable Points[SideHUD]");	
+				AddMenuItem(menu, "points", "Enable Points[SideHUD]");
 			}
 			else
 			{
-				AddMenuItem(menu, "points", "Disable Points[SideHUD]");	
+				AddMenuItem(menu, "points", "Disable Points[SideHUD]");
 			}
 		}
-		
+
 		if(g_Settings[HUDMapEnable])
 		{
 			if(hudSettings[Map][client] == 0)
 			{
-				AddMenuItem(menu, "map", "Enable Map Display [SideHUD]");	
+				AddMenuItem(menu, "map", "Enable Map Display [SideHUD]");
 			}
 			else
 			{
-				AddMenuItem(menu, "map", "Disable Map Display [SideHUD]");	
+				AddMenuItem(menu, "map", "Disable Map Display [SideHUD]");
 			}
 		}
-		
+
 		if(g_Settings[HUDStyleEnable])
 		{
 			if(hudSettings[Mode][client] == 0)
 			{
-				AddMenuItem(menu, "mode", "Enable Style Display [SideHUD]");	
+				AddMenuItem(menu, "mode", "Enable Style Display [SideHUD]");
 			}
 			else
 			{
-				AddMenuItem(menu, "mode", "Disable Style Display [SideHUD]");	
+				AddMenuItem(menu, "mode", "Disable Style Display [SideHUD]");
 			}
 		}
-		
+
 		if(g_Settings[HUDWREnable])
 		{
 			if(hudSettings[WR][client] == 0)
 			{
-				AddMenuItem(menu, "wrholder", "Enable WR Holder Display [SideHUD]");	
+				AddMenuItem(menu, "wrholder", "Enable WR Holder Display [SideHUD]");
 			}
 			else
 			{
-				AddMenuItem(menu, "wrholder", "Disable WR Holder Display [SideHUD]");	
+				AddMenuItem(menu, "wrholder", "Disable WR Holder Display [SideHUD]");
 			}
 		}
-		
+
 		if(g_Settings[HUDWREnable])
 		{
 			if(hudSettings[WR][client] == 0)
 			{
-				AddMenuItem(menu, "wr", "Enable WR Time Display [SideHUD]");	
+				AddMenuItem(menu, "wr", "Enable WR Time Display [SideHUD]");
 			}
 			else
 			{
-				AddMenuItem(menu, "wr", "Disable WR Time Display [SideHUD]");	
+				AddMenuItem(menu, "wr", "Disable WR Time Display [SideHUD]");
 			}
 		}
-		
+
 		if(g_Settings[HUDRankEnable])
 		{
 			if(hudSettings[Rank][client] == 0)
 			{
-				AddMenuItem(menu, "rank", "Enable Rank Display [SideHUD]");	
+				AddMenuItem(menu, "rank", "Enable Rank Display [SideHUD]");
 			}
 			else
 			{
-				AddMenuItem(menu, "rank", "Disable Rank Display [SideHUD]");	
+				AddMenuItem(menu, "rank", "Disable Rank Display [SideHUD]");
 			}
 		}
-		
+
 		if(g_Settings[HUDLevelEnable])
 		{
 			if(hudSettings[Level][client] == 0)
 			{
-				AddMenuItem(menu, "level", "Enable Level Display [SideHUD]");	
+				AddMenuItem(menu, "level", "Enable Level Display [SideHUD]");
 			}
 			else
 			{
-				AddMenuItem(menu, "level", "Disable Level Display [SideHUD]");	
+				AddMenuItem(menu, "level", "Disable Level Display [SideHUD]");
 			}
 		}
-		
+
 		if(g_Settings[HUDPBEnable])
 		{
 			if(hudSettings[PB][client] == 0)
 			{
-				AddMenuItem(menu, "pb", "Enable Personal Best [SideHUD]");	
+				AddMenuItem(menu, "pb", "Enable Personal Best [SideHUD]");
 			}
 			else
 			{
-				AddMenuItem(menu, "pb", "Disable Personal Best [SideHUD]");	
+				AddMenuItem(menu, "pb", "Disable Personal Best [SideHUD]");
 			}
 		}
-		
+
 		if(g_Settings[HUDTTWREnable])
 		{
 			if(hudSettings[TTWR][client] == 0)
 			{
-				AddMenuItem(menu, "ttwr", "Enable TTWR Display [SideHUD]");	
+				AddMenuItem(menu, "ttwr", "Enable TTWR Display [SideHUD]");
 			}
 			else
 			{
-				AddMenuItem(menu, "ttwr", "Disable TTWR Display [SideHUD]");	
+				AddMenuItem(menu, "ttwr", "Disable TTWR Display [SideHUD]");
 			}
 		}
-	
+
 		if(g_Settings[HUDTimeleftEnable])
 		{
 			if(hudSettings[Timeleft][client] == 0)
 			{
-				AddMenuItem(menu, "timeleft", "Enable Timeleft Display [SideHUD]");	
+				AddMenuItem(menu, "timeleft", "Enable Timeleft Display [SideHUD]");
 			}
 			else
 			{
-				AddMenuItem(menu, "timeleft", "Disable Timeleft Display [SideHUD]");	
+				AddMenuItem(menu, "timeleft", "Disable Timeleft Display [SideHUD]");
 			}
 		}
-		
+
 		if(g_Settings[HUDKeysEnable])
 		{
 			if(hudSettings[Keys][client] == 0)
 			{
-				AddMenuItem(menu, "keys", "Enable Keys Display [SideHUD/Spec only]");	
+				AddMenuItem(menu, "keys", "Enable Keys Display [SideHUD/Spec only]");
 			}
 			else
 			{
-				AddMenuItem(menu, "keys", "Disable Keys Display [SideHUD/Spec only]");	
+				AddMenuItem(menu, "keys", "Disable Keys Display [SideHUD/Spec only]");
 			}
 		}
-		
+
 		if(g_Settings[HUDSteamIDEnable])
 		{
 			if(hudSettings[Steam][client] == 0)
 			{
-				AddMenuItem(menu, "steam", "Enable Steam [SideHUD/Spec only]");	
+				AddMenuItem(menu, "steam", "Enable Steam [SideHUD/Spec only]");
 			}
 			else
 			{
-				AddMenuItem(menu, "steam", "Disable Steam [SideHUD/Spec only]");	
+				AddMenuItem(menu, "steam", "Disable Steam [SideHUD/Spec only]");
 			}
 		}
-		
+
 		SetMenuExitButton(menu, true);
 
 		DisplayMenuAtItem(menu, client, start_item, MENU_TIME_FOREVER );
@@ -1139,7 +1139,7 @@ public Action:Cmd_HideMyAss(client, args)
 			PrintToChat(client, "Hide My Ass: Enabled.");
 		}
 	}
-	return Plugin_Handled;	
+	return Plugin_Handled;
 }
 
 public OnConfigsExecuted()
@@ -1160,9 +1160,9 @@ stock RestartMapTimer()
 		CloseHandle(g_hThink_Map);
 		g_hThink_Map = INVALID_HANDLE;
 	}
-	
+
 	new bool:gotTimeLeft = GetMapTimeLeft(g_iMap_TimeLeft);
-	
+
 	if(gotTimeLeft && g_iMap_TimeLeft > 0)
 	{
 		g_hThink_Map = CreateTimer(THINK_INTERVAL, Timer_Think_Map, INVALID_HANDLE, TIMER_REPEAT);
@@ -1202,13 +1202,13 @@ public OnClientPutInServer(client)
 		hudSettings[Steam][client] = 1;
 		hudSettings[Points][client] = 1;
 		hudSettings[Timeleft][client] = 1;
-		
+
 		if (AreClientCookiesCached(client))
 		{
 			loadClientCookiesFor(client);
 		}
 	}
-	
+
 	if(g_hThink_Map == INVALID_HANDLE && IsServerProcessing())
 	{
 		RestartMapTimer();
@@ -1226,7 +1226,7 @@ public Action:Event_PlayerJump(Handle:event, const String:name[], bool:dontBroad
 
 	g_iJumps[client]++;
 	g_hDelayJump[client] = CreateTimer(0.3, Timer_DelayJumpHud, client, TIMER_FLAG_NO_MAPCHANGE);
-	
+
 	return Plugin_Continue;
 }
 
@@ -1240,9 +1240,9 @@ public Action:Timer_DelayJumpHud(Handle:timer, any:client)
 public Action:Event_Reset(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new client = GetClientOfUserId(GetEventInt(event, "userid"));
-	
+
 	g_iJumps[client] = 0;
-	
+
 	if (g_hDelayJump[client] != INVALID_HANDLE)
 	{
 		CloseHandle(g_hDelayJump[client]);
@@ -1257,15 +1257,15 @@ public Action:HUDTimer_CSS(Handle:timer)
 	{
 		spec[client] = false;
 	}
-	
+
 	for (new client = 1; client <= MaxClients; client++)
 	{
 		if (!IsClientInGame(client))
 			continue;
-		
+
 		if(hidemyass[client])
 			continue;
-		
+
 		// Get target he's spectating
 		if(!IsPlayerAlive(client) || IsClientObserver(client))
 		{
@@ -1280,7 +1280,7 @@ public Action:HUDTimer_CSS(Handle:timer)
 			}
 		}
 	}
-	
+
 	for (new client = 1; client <= MaxClients; client++)
 	{
 		if (IsClientInGame(client))
@@ -1294,21 +1294,21 @@ UpdateHUD_CSS(client)
 {
 	if(!g_timerCore)
 		return;
-	
+
 	if(!IsClientInGame(client))
 		return;
-	
+
 	if(!hudSettings[Master][client])
 		return;
-	
+
 	if(!g_Settings[HUDMasterEnable])
 		return;
-	
+
 	new iClientToShow, iButtons, iObserverMode;
 
 	// Show own buttons by default
 	iClientToShow = client;
-	
+
 	// Get target he's spectating
 	if(!IsPlayerAlive(client) || IsClientObserver(client))
 	{
@@ -1316,7 +1316,7 @@ UpdateHUD_CSS(client)
 		if(iObserverMode == SPECMODE_FIRSTPERSON || iObserverMode == SPECMODE_3RDPERSON)
 		{
 			iClientToShow = GetEntPropEnt(client, Prop_Send, "m_hObserverTarget");
-			
+
 			// Check client index
 			if(iClientToShow <= 0 || iClientToShow > MaxClients)
 				return;
@@ -1326,21 +1326,28 @@ UpdateHUD_CSS(client)
 			return; // don't proceed, if in freelook..
 		}
 	}
-	
+
 	if(g_timerLjStats && IsClientInLJMode(iClientToShow))
 	{
 		return;
 	}
-	
+
 	//start building HUD
-	new String:hintText[512]; //HUD buffer	
-	new String:centerText[512]; //HUD buffer	
-	
+	new String:hintText[512]; //HUD buffer
+	new String:centerText[512]; //HUD buffer
+
 	//collect player info
 	decl String:auth[32]; //steam ID
-	if(!IsFakeClient(iClientToShow)) GetClientAuthString(iClientToShow, auth, sizeof(auth));
+	if(!IsFakeClient(iClientToShow))
+	{
+		#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+			GetClientAuthId(iClientToShow, AuthId_Steam2, auth, sizeof(auth));
+		#else
+			GetClientAuthString(iClientToShow, auth, sizeof(auth));
+		#endif
+	}
 	else FormatEx(auth, sizeof(auth), "Replay-Bot");
-	
+
 	iButtons = g_iButtonsPressed[iClientToShow]; //buttons pressed
 
 	//collect player stats
@@ -1351,45 +1358,40 @@ UpdateHUD_CSS(client)
 	new bestJumps; //best round jumps
 	new jumps; //current jump count
 	new fpsmax; //fps settings
-	new bool:bonus = false; //bonus timer running
+	new track; //bonus timer running
 	new Float:time; //current time
 	new RecordId;
 	new Float:RecordTime;
 	new RankTotal;
 	new String:WrName[32];
-	
+
 	Timer_GetClientTimer(iClientToShow, enabled, time, jumps, fpsmax);
-	
-	new style, ranked;	
-	if(g_timerPhysics) 
+
+	new style, ranked;
+	if(g_timerPhysics)
 	{
-		style = Timer_GetStyle(iClientToShow);	
+		style = Timer_GetStyle(iClientToShow);
 		ranked = Timer_IsStyleRanked(style);
 	}
-		
+
 	//get current player level
 	new currentLevel = 0;
 	if(g_timerMapzones) currentLevel = Timer_GetClientLevelID(iClientToShow);
 	if(currentLevel < 1) currentLevel = 1;
-	
-	//bonuslevel?
-	if(currentLevel > 1000) 
-	{
-		currentLevel -= 1000;
-		bonus = true;
-	}
-	
+
+	track = Timer_GetTrack(iClientToShow);
+
 	//get bhop mode
-	if (g_timerPhysics && g_timerWorldRecord) 
+	if (g_timerPhysics && g_timerWorldRecord)
 	{
-		Timer_GetStyleRecordWRStats(style, bonus, RecordId, RecordTime, RankTotal);
+		Timer_GetStyleRecordWRStats(style, track, RecordId, RecordTime, RankTotal);
 		Timer_SecondsToTime(time, buffer, sizeof(buffer), 0);
-		Timer_GetRecordHolderName(style, bonus, 1, WrName, 32);
+		Timer_GetRecordHolderName(style, track, 1, WrName, 32);
 	}
-	
+
 	//get maptier
 	new tier = 1;
-	if(g_timerMapTier) tier = Timer_GetTier(bonus);
+	if(g_timerMapTier) tier = Timer_GetTier(track);
 
 	//get speed
 	new Float:maxspeed;
@@ -1398,7 +1400,7 @@ UpdateHUD_CSS(client)
 	if(g_timerPhysics) Timer_GetCurrentSpeed(iClientToShow, currentspeed);
 	new Float:avgspeed;
 	if(g_timerPhysics) Timer_GetAvgSpeed(iClientToShow, avgspeed);
-	
+
 	if(g_Settings[HUDSpeedUnit] == 1)
 	{
 		maxspeed *= 0.06858;
@@ -1409,43 +1411,43 @@ UpdateHUD_CSS(client)
 	//get jump accuracy
 	new Float:accuracy = 0.0;
 	if(g_timerPhysics) Timer_GetJumpAccuracy(iClientToShow, accuracy);
-	
+
 	if(accuracy > 100.0) accuracy = 100.0;
 	else if(accuracy < 0.0) accuracy = 0.0;
-	
-	if(ranked) 
+
+	if(ranked)
 	{
-		if(g_timerWorldRecord) Timer_GetBestRound(iClientToShow, style, bonus, bestTime, bestJumps);
+		if(g_timerWorldRecord) Timer_GetBestRound(iClientToShow, style, track, bestTime, bestJumps);
 		Timer_SecondsToTime(bestTime, bestbuffer, sizeof(bestbuffer), 2);
 	}
-	
+
 	//has client a mate?
 	new mate = 0; //challenge mode
 	if (g_timerMapzones) mate = Timer_GetClientTeammate(iClientToShow);
-	
+
 	new points;
 	if(g_timerRankings) points = Timer_GetPoints(iClientToShow);
 	new points100 = points;
 	if(g_Settings[HUDUseMVPStars] > 0) points100 = RoundToFloor((points*1.0)/g_Settings[HUDUseMVPStars]);
 
 	new rank;
-	
-	if(ranked && g_timerWorldRecord) 
+
+	if(ranked && g_timerWorldRecord)
 	{
 		//get rank
-		rank = Timer_GetStyleRank(iClientToShow, bonus, style);	
+		rank = Timer_GetStyleRank(iClientToShow, track, style);
 	}
-	
+
 	new prank;
 	if(g_timerRankings)  prank = Timer_GetPointRank(iClientToShow);
-	
+
 	if(prank > 2000 || prank < 1) prank = 2000;
-	
+
 	new nprank = (prank * -1);
-	
+
 	new String:sRankTotal[32];
 	Format(sRankTotal, sizeof(sRankTotal), "%d", RankTotal);
-	
+
 	if(client == iClientToShow)
 	{
 		if(g_Settings[HUDUseMVPStars] > 0 && points100 > 0)
@@ -1460,7 +1462,7 @@ UpdateHUD_CSS(client)
 		{
 			Client_SetDeaths(client, rank);
 		}
-		
+
 		if(g_Settings[HUDUseClanTag] && !IsFakeClient(client))
 		{
 			decl String:tagbuffer[32];
@@ -1469,10 +1471,10 @@ UpdateHUD_CSS(client)
 				if(enabled) FormatEx(tagbuffer, sizeof(tagbuffer), "%s", buffer);
 				else if (ranked) FormatEx(tagbuffer, sizeof(tagbuffer), "%s", bestbuffer);
 			}
-			
+
 			if(g_Settings[HUDUseClanTagTime] && g_Settings[MultimodeEnable] && g_Settings[HUDUseClanTagStyle])
 				Format(tagbuffer, sizeof(tagbuffer), " %s", tagbuffer);
-			
+
 			if(g_Settings[MultimodeEnable] && g_Settings[HUDUseClanTagStyle])
 			{
 				if(!enabled && !ranked)
@@ -1484,44 +1486,60 @@ UpdateHUD_CSS(client)
 					Format(tagbuffer, sizeof(tagbuffer), "%s%s", g_Physics[style][StyleTagShortName], tagbuffer);
 				}
 			}
-			
+
 			CS_SetClientClanTag(client, tagbuffer);
 		}
 	}
-	
+
 	//start format center HUD
-	
+
 	new stagecount;
-	
+
 	if(g_timerMapzones)
 	{
-		if(bonus)
+		if(track == TRACK_BONUS)
 		{
 			stagecount = Timer_GetMapzoneCount(ZtBonusLevel)+Timer_GetMapzoneCount(ZtBonusCheckpoint)+1;
+		}
+		else if(track == TRACK_BONUS2)
+		{
+			stagecount = Timer_GetMapzoneCount(ZtBonus2Level)+Timer_GetMapzoneCount(ZtBonus2Checkpoint)+1;
+		}
+		else if(track == TRACK_BONUS3)
+		{
+			stagecount = Timer_GetMapzoneCount(ZtBonus3Level)+Timer_GetMapzoneCount(ZtBonus3Checkpoint)+1;
+		}
+		else if(track == TRACK_BONUS4)
+		{
+			stagecount = Timer_GetMapzoneCount(ZtBonus4Level)+Timer_GetMapzoneCount(ZtBonus4Checkpoint)+1;
+		}
+		else if(track == TRACK_BONUS5)
+		{
+			stagecount = Timer_GetMapzoneCount(ZtBonus5Level)+Timer_GetMapzoneCount(ZtBonus5Checkpoint)+1;
 		}
 		else
 		{
 			stagecount = Timer_GetMapzoneCount(ZtLevel)+Timer_GetMapzoneCount(ZtCheckpoint)+1;
 		}
 	}
-	
+
 	if (enabled)
 	{
 		decl String:timeString[64];
 		Timer_SecondsToTime(time, timeString, sizeof(timeString), 1);
-		
+
 		if(StrEqual(timeString, "00:-0.0")) FormatEx(timeString, sizeof(timeString), "00:00.0");
-		
+
 		if (hudSettings[Time][client])
 			Format(centerText, sizeof(centerText), "%sTime: %s\n", centerText, timeString);
 			//Format(centerText, sizeof(centerText), "%s%t: %s\n", centerText, "Time", timeString);
-		
+
 		if ((hudSettings[Jumps][client] && g_Settings[HUDJumpsEnable]) && (hudSettings[JumpAcc][client] && g_Settings[HUDJumpAccEnable]) && !g_Physics[style][StyleAuto])
 			Format(centerText, sizeof(centerText), "%s%t: %d [%.2f %%]\n", centerText, "Jumps", jumps, accuracy);
 		else if (hudSettings[Jumps][client] && g_Settings[HUDJumpsEnable])
 			Format(centerText, sizeof(centerText), "%s%t: %d\n", centerText, "Jumps", jumps);
 	}
-	
+
 	if(!enabled)
 	{
 		if (hudSettings[Speed][client] && g_Settings[HUDSpeedEnable])
@@ -1529,13 +1547,13 @@ UpdateHUD_CSS(client)
 			Format(centerText, sizeof(centerText), "%s%t: %d%s", centerText, "HUD Speed", RoundToFloor(currentspeed), g_Settings[HUDSpeedUnit] == 1 ? "km/h"  : "");
 		}
 	}
-	else 
+	else
 	{
 		if(g_timerStrafes && hudSettings[Strafes][client] && g_Settings[HUDStrafesEnable])
 		{
 			Format(centerText, sizeof(centerText), "%sStrafes: %d\n", centerText, Timer_GetStrafeCount(iClientToShow));
 		}
-		
+
 		if(hudSettings[Speed][client] && g_Settings[HUDSpeedEnable])
 		{
 			if(hudSettings[SpeedMax][client] && g_Settings[HUDSpeedMaxEnable])
@@ -1548,7 +1566,7 @@ UpdateHUD_CSS(client)
 			}
 		}
 	}
-	
+
 	if (g_Settings[HUDCenterEnable] && hudSettings[Main][client])
 	{
 		if(!IsVoteInProgress())
@@ -1560,41 +1578,41 @@ UpdateHUD_CSS(client)
 			else PrintHintText(client, centerText);
 		}
 	}
-	
+
 	//PrintCenterText(client, centerText);
-	
+
 	//start format side HUD
-	
-	
+
+
 	if (iClientToShow != client && (iObserverMode == SPECMODE_FIRSTPERSON || iObserverMode == SPECMODE_3RDPERSON))
 	{
 		//Format(hintText, sizeof(hintText), "%sName: %s%N\n", hintText,  client_tag, iClientToShow);
 		if (hudSettings[Steam][client] && g_Settings[HUDSteamIDEnable])
 			Format(hintText, sizeof(hintText), "%sSteamID: %s\n", hintText, auth);
 	}
-	
+
 	if (hudSettings[Points][client] && g_Settings[HUDPointsEnable])
 		Format(hintText, sizeof(hintText), "%sPoints: %d\n", hintText, points);
-	
+
 	if(0 < mate && IsClientInGame(mate))
 	{
 		Format(hintText, sizeof(hintText), "%sTeammate: %N\n", hintText, mate);
 	}
-	
+
 	//Format(hintText, sizeof(hintText), "%s %s - %t: %d/5\n", hintText, "Tier", g_currentMap, tier);
 	if (hudSettings[Map][client] && g_Settings[HUDMapEnable])
 		Format(hintText, sizeof(hintText), "%s%s (Tier %d)\n", hintText, g_currentMap, tier);
-	
+
 	new String:RecordTimeString[32];
 	new String:DiffTimeString[32];
 
 	new bool:negate = false;
-		
+
 	if(ranked)
 	{
-		
+
 		Timer_SecondsToTime(RecordTime, RecordTimeString, sizeof(RecordTimeString), 2);
-		
+
 		if(time-RecordTime >= 0)
 		{
 			Timer_SecondsToTime(time-RecordTime, DiffTimeString, sizeof(DiffTimeString), 2);
@@ -1604,37 +1622,37 @@ UpdateHUD_CSS(client)
 			negate = true;
 			Timer_SecondsToTime(RecordTime-time, DiffTimeString, sizeof(DiffTimeString), 2);
 		}
-		
-		
+
+
 		//correct fail format
 		if(StrEqual(RecordTimeString, "00:-0.00")) FormatEx(RecordTimeString, sizeof(RecordTimeString), "00:00.00");
 		if(StrEqual(RecordTimeString, "00:00.-0")) FormatEx(RecordTimeString, sizeof(RecordTimeString), "00:00.00");
 	}
-	
-	if (g_timerPhysics && g_Settings[MultimodeEnable]) 
-	{	
+
+	if (g_timerPhysics && g_Settings[MultimodeEnable])
+	{
 		if (hudSettings[Mode][client] && g_Settings[HUDStyleEnable])
 			Format(hintText, sizeof(hintText), "%sStyle: %s\n", hintText, g_Physics[style][StyleName]);
 	}
-	
+
 	if(ranked && RecordTime > 0.0)
 	{
 		if (hudSettings[WRHolder][client] && g_Settings[HUDWRHolderEnable])
 			Format(hintText, sizeof(hintText), "%sWR Holder: %s\n", hintText, WrName);
-		
+
 		if (hudSettings[WR][client] && g_Settings[HUDWREnable])
 			Format(hintText, sizeof(hintText), "%sWR Time: %s\n", hintText, RecordTimeString);
-		
+
 		if (hudSettings[WR][client] || hudSettings[Mode][client] || hudSettings[Map][client])
 			Format(hintText, sizeof(hintText), "%s\n", hintText);
 		//Format(hintText, sizeof(hintText), "%s\n%N:\n", hintText, iClientToShow);
 	}
-	
+
 	if (hudSettings[Level][client] && g_Settings[HUDLevelEnable])
 	{
 		if(stagecount <= 1)
 		{
-			if(bonus) 
+			if(track > TRACK_NORMAL)
 			{
 				Format(hintText, sizeof(hintText), "%sBonus-Stage: Linear\n", hintText);
 			}
@@ -1643,12 +1661,22 @@ UpdateHUD_CSS(client)
 				Format(hintText, sizeof(hintText), "%sStage: Linear\n", hintText);
 			}
 		}
-		else if(bonus) 
+		else if(track > TRACK_NORMAL)
 		{
-			if(currentLevel == 999)
-				Format(hintText, sizeof(hintText), "%sBonus-Stage: End/%d\n", hintText, stagecount);
+			if(track > TRACK_BONUS)
+			{
+				if(currentLevel == 999)
+					Format(hintText, sizeof(hintText), "%sBonus%d-Stage: End/%d\n", hintText, track, stagecount);
+				else
+					Format(hintText, sizeof(hintText), "%sBonus%d-Stage: %d/%d\n", hintText, track, currentLevel, stagecount);
+			}
 			else
-				Format(hintText, sizeof(hintText), "%sBonus-Stage: %d/%d\n", hintText, currentLevel, stagecount);
+			{
+				if(currentLevel == 999)
+					Format(hintText, sizeof(hintText), "%sBonus-Stage: End/%d\n", hintText, stagecount);
+				else
+					Format(hintText, sizeof(hintText), "%sBonus-Stage: %d/%d\n", hintText, currentLevel, stagecount);
+			}
 		}
 		else
 		{
@@ -1658,7 +1686,7 @@ UpdateHUD_CSS(client)
 				Format(hintText, sizeof(hintText), "%sStage: %d/%d\n", hintText, currentLevel, stagecount);
 		}
 	}
-	
+
 	if(ranked)
 	{
 		if (hudSettings[Rank][client] && g_Settings[HUDRankEnable])
@@ -1668,10 +1696,10 @@ UpdateHUD_CSS(client)
 			else
 				Format(hintText, sizeof(hintText), "%sRank: %d/%s\n", hintText, rank, sRankTotal);
 		}
-		
+
 		if (hudSettings[PB][client] && g_Settings[HUDPBEnable])
 			Format(hintText, sizeof(hintText), "%sBest Time: %s\n", hintText, bestbuffer, bestJumps);
-		
+
 		if (hudSettings[TTWR][client] && g_Settings[HUDTTWREnable])
 		{
 			if(RecordTime > 0 && time > 0)
@@ -1684,8 +1712,8 @@ UpdateHUD_CSS(client)
 			else Format(hintText, sizeof(hintText), "%sTime2WR: 00:00.00\n", hintText);
 		}
 	}
-	
-	if(hudSettings[Timeleft][client] && g_Settings[HUDTimeleftEnable]) 
+
+	if(hudSettings[Timeleft][client] && g_Settings[HUDTimeleftEnable])
 	{
 		if(g_iMap_TimeLeft > 0)
 		{
@@ -1693,49 +1721,49 @@ UpdateHUD_CSS(client)
 		}
 		else Format(hintText,sizeof(hintText),"%sTimeleft: %d:%02d\n", hintText, (RoundToFloor(g_iMap_TimeLeft*-1.0))/60, (RoundToFloor(g_iMap_TimeLeft*-1.0))%60);
 	}
-	
+
 	//speclist
 	if (hudSettings[Spec][client] && g_Settings[HUDSpeclistEnable])
 	{
 		new iSpecCount;
-		
-		for(new j = 1; j <= MaxClients; j++) 
+
+		for(new j = 1; j <= MaxClients; j++)
 		{
 			if (!IsClientInGame(j) || !IsClientObserver(j))
 				continue;
-			
+
 			if (IsClientSourceTV(j))
 				continue;
-				
+
 			new iSpecMode = GetEntProp(j, Prop_Send, "m_iObserverMode");
-			
+
 			// The client isn't spectating any one person, so ignore them.
 			if (iSpecMode != SPECMODE_FIRSTPERSON && iSpecMode != SPECMODE_3RDPERSON)
 				continue;
-			
+
 			// Find out who the client is spectating.
 			new iTarget = GetEntPropEnt(j, Prop_Send, "m_hObserverTarget");
-			
+
 			// Are they spectating the same player as User?
 			if (iTarget == iClientToShow && j != iClientToShow && !hidemyass[j])
 				iSpecCount++;
 		}
-		
+
 		if(iSpecCount > 0)
 		{
 			Format(hintText, sizeof(hintText), "%sSpectators: %d\n\n", hintText, iSpecCount);
 		}
 	}
-	
+
 	if (hudSettings[Keys][client] && g_Settings[HUDKeysEnable])
 	{
 		//if client is spectating show player keys
 		if (iClientToShow != client && (iObserverMode == SPECMODE_FIRSTPERSON || iObserverMode == SPECMODE_3RDPERSON))
 		{
 			Format(hintText, sizeof(hintText), "%s_______Keys_______\n\n", hintText);
-			
+
 			//dealing with keys pressed
-			
+
 			// Is he pressing "w"?
 			if(iButtons & IN_FORWARD)
 				Format(hintText, sizeof(hintText), "%sW;", hintText);
@@ -1754,42 +1782,42 @@ UpdateHUD_CSS(client)
 			// Is he pressing "+right"?
 			if(iButtons & IN_RIGHT)
 				Format(hintText, sizeof(hintText), "%s+R;", hintText);
-				
+
 			// Is he pressing "space"?
 			if(iButtons & IN_JUMP || g_hDelayJump[iClientToShow] != INVALID_HANDLE)
 				Format(hintText, sizeof(hintText), "%sJP;", hintText);
-			
+
 			// Is he pressing "ctrl"?
 			if(iButtons & IN_DUCK)
 				Format(hintText, sizeof(hintText), "%sDK;", hintText);
-				
+
 			// Is he pressing "shift"?
 			if(iButtons & IN_SPEED)
 				Format(hintText, sizeof(hintText), "%sWALK;", hintText);
-				
+
 			// Is he pressing "e"?
 			if(iButtons & IN_USE)
 				Format(hintText, sizeof(hintText), "%sU;", hintText);
-				
+
 			// Is he pressing "mouse1"?
 			if(iButtons & IN_ATTACK)
 				Format(hintText, sizeof(hintText), "%sM1;", hintText);
-			
+
 			// Is he pressing "mouse1"?
 			if(iButtons & IN_ATTACK2)
 				Format(hintText, sizeof(hintText), "%sM2;", hintText);
-			
+
 			// Is he pressing "tab"?
 			if(iButtons & IN_SCORE)
 				Format(hintText, sizeof(hintText), "%sTAB;", hintText);
 		}
-	
+
 		//if player has a mate show keys pressed by players mate
-		
+
 		if(0 < mate && IsClientInGame(mate))
 		{
 			new mbuttons = g_iButtonsPressed[mate];
-		
+
 			Format(hintText, sizeof(hintText), "%s\n____Keys-Mate_____\n\n", hintText);
 
 			// Is he pressing "w"?
@@ -1810,43 +1838,43 @@ UpdateHUD_CSS(client)
 			// Is he pressing "+right"?
 			if(mbuttons & IN_RIGHT)
 				Format(hintText, sizeof(hintText), "%s+R;", hintText);
-				
+
 			// Is he pressing "space"?
 			if(mbuttons & IN_JUMP || g_hDelayJump[mate] != INVALID_HANDLE)
 				Format(hintText, sizeof(hintText), "%sJP;", hintText);
-			
+
 			// Is he pressing "ctrl"?
 			if(mbuttons & IN_DUCK)
 				Format(hintText, sizeof(hintText), "%sDK;", hintText);
-				
+
 			// Is he pressing "shift"?
 			if(mbuttons & IN_SPEED)
 				Format(hintText, sizeof(hintText), "%sWALK;", hintText);
-				
+
 			// Is he pressing "e"?
 			if(mbuttons & IN_USE)
 				Format(hintText, sizeof(hintText), "%sU;", hintText);
-			
+
 			// Is he pressing "tab"?
 			if(mbuttons & IN_SCORE)
 				Format(hintText, sizeof(hintText), "%sTAB;", hintText);
-				
+
 			// Is he pressing "mouse1"?
 			if(mbuttons & IN_ATTACK)
 				Format(hintText, sizeof(hintText), "%sM1;", hintText);
-			
+
 			// Is he pressing "mouse1"?
 			if(mbuttons & IN_ATTACK2)
 				Format(hintText, sizeof(hintText), "%sM2;", hintText);
 		}
 	}
-	
+
 	//Print as his Text
 	if (hudSettings[Side][client] && g_Settings[HUDSideEnable])
 	{
 		Client_PrintKeyHintText(client, hintText);
 	}
-	
+
 	//stop confusing hint sound
 	StopSound(client, SNDCHAN_STATIC, "UI/hint.wav");
 }
@@ -1870,34 +1898,34 @@ public Action:Cmd_SpecInfo(client, args)
 	{
 		Print_Specinfo(client, owner);
 	}
-	
-	return Plugin_Handled;	
+
+	return Plugin_Handled;
 }
 
 Print_Specinfo(client, owner)
 {
 	new String:buffer[1024];
-	
+
 	new spec_count = GetSpecCount(client);
 	new count = 0;
-	
-	for(new j = 1; j <= MaxClients; j++) 
+
+	for(new j = 1; j <= MaxClients; j++)
 	{
 		if (!IsClientInGame(j) || !IsClientObserver(j))
 			continue;
-		
+
 		if (IsClientSourceTV(j))
 			continue;
-			
+
 		new iSpecMode = GetEntProp(j, Prop_Send, "m_iObserverMode");
-		
+
 		// The client isn't spectating any one person, so ignore them.
 		if (iSpecMode != SPECMODE_FIRSTPERSON && iSpecMode != SPECMODE_3RDPERSON)
 			continue;
-		
+
 		// Find out who the client is spectating.
 		new iTarget = GetEntPropEnt(j, Prop_Send, "m_hObserverTarget");
-		
+
 		// Are they spectating the same player as User?
 		if (iTarget == client && j != client && !hidemyass[j])
 		{
@@ -1906,43 +1934,43 @@ Print_Specinfo(client, owner)
 			{
 				Format(buffer, sizeof(buffer), "%s %N", buffer, j);
 			}
-			else 
+			else
 			{
 				Format(buffer, sizeof(buffer), "%s %N,", buffer, j);
 			}
 		}
 	}
-	
+
 	CPrintToChat(owner, "%s {red}%N {olive}has {red}%d {olive}spectators:{red}%s.", PLUGIN_PREFIX2, client, count, buffer);
 }
 
 stock GetSpecCount(client)
 {
 	new count = 0;
-	
-	for(new j = 1; j <= MaxClients; j++) 
+
+	for(new j = 1; j <= MaxClients; j++)
 	{
 		if (!IsClientInGame(j) || !IsClientObserver(j))
 			continue;
-		
+
 		if (IsClientSourceTV(j))
 			continue;
-			
+
 		new iSpecMode = GetEntProp(j, Prop_Send, "m_iObserverMode");
-		
+
 		// The client isn't spectating any one person, so ignore them.
 		if (iSpecMode != SPECMODE_FIRSTPERSON && iSpecMode != SPECMODE_3RDPERSON)
 			continue;
-		
+
 		// Find out who the client is spectating.
 		new iTarget = GetEntPropEnt(j, Prop_Send, "m_hObserverTarget");
-		
+
 		// Are they spectating the same player as User?
 		if (iTarget == client && j != client && !hidemyass[j])
 		{
 			count++;
 		}
 	}
-	
+
 	return count;
 }

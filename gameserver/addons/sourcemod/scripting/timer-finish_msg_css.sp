@@ -14,7 +14,7 @@
 new bool:g_timerPhysics = false;
 new bool:g_timerWorldRecord = false;
 
-public Plugin:myinfo = 
+public Plugin:myinfo =
 {
 	name = "[Timer] Finish Message",
 	author = "Zipcore",
@@ -31,10 +31,10 @@ public OnPluginStart()
 		SetFailState("Check timer error logs.");
 		return;
 	}
-	
+
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	g_timerPhysics = LibraryExists("timer-physics");
 	g_timerWorldRecord = LibraryExists("timer-worldrecord");
 }
@@ -44,7 +44,7 @@ public OnLibraryAdded(const String:name[])
 	if (StrEqual(name, "timer-physics"))
 	{
 		g_timerPhysics = true;
-	}	
+	}
 	else if (StrEqual(name, "timer-worldrecord"))
 	{
 		g_timerWorldRecord = true;
@@ -52,11 +52,11 @@ public OnLibraryAdded(const String:name[])
 }
 
 public OnLibraryRemoved(const String:name[])
-{	
+{
 	if (StrEqual(name, "timer-physics"))
 	{
 		g_timerPhysics = false;
-	}	
+	}
 	else if (StrEqual(name, "timer-worldrecord"))
 	{
 		g_timerWorldRecord = false;
@@ -74,7 +74,7 @@ public OnTimerRecord(client, track, style, Float:time, Float:lasttime, currentra
 {
 	decl String:name[MAX_NAME_LENGTH];
 	GetClientName(client, name, sizeof(name));
-	
+
 	//Record Info
 	new RecordId;
 	new Float:RecordTime;
@@ -84,30 +84,30 @@ public OnTimerRecord(client, track, style, Float:time, Float:lasttime, currentra
 	new LastJumps;
 	decl String:TimeDiff[32];
 	decl String:buffer[32];
-	
+
 	new bool:NewPersonalRecord = false;
 	new bool:NewWorldRecord = false;
 	new bool:FirstRecord = false;
-	
+
 	new bool:ranked;
-	if(g_timerPhysics) 
+	if(g_timerPhysics)
 	{
 		ranked = bool:Timer_IsStyleRanked(style);
 	}
-	
+
 	new bool:enabled = false;
 	new jumps = 0;
 	new fpsmax;
 
 	Timer_GetClientTimer(client, enabled, time, jumps, fpsmax);
-	
-	if(g_timerWorldRecord) 
+
+	if(g_timerWorldRecord)
 	{
 		/* Get Personal Record */
 		if(Timer_GetBestRound(client, style, track, LastTime, LastJumps))
 		{
 			LastTimeStatic = LastTime;
-			LastTime -= time;			
+			LastTime -= time;
 			if(LastTime < 0.0)
 			{
 				LastTime *= -1.0;
@@ -135,72 +135,84 @@ public OnTimerRecord(client, track, style, Float:time, Float:lasttime, currentra
 			RankTotal++;
 		}
 	}
-	
+
 	decl String:TimeString[32];
 	Timer_SecondsToTime(time, TimeString, sizeof(TimeString), 2);
-	
+
 	new String:WrName[32], String:WrTime[32];
 	new Float:wrtime;
-	
+
 	if(g_timerWorldRecord)
 	{
 		Timer_GetRecordTimeInfo(style, track, newrank, wrtime, WrTime, 32);
 		Timer_GetRecordHolderName(style, track, newrank, WrName, 32);
-	
+
 		/* Get World Record */
 		Timer_GetStyleRecordWRStats(style, track, RecordId, RecordTime, RankTotal);
 	}
-	
+
 	/* Detect Record Type */
 	if(RecordTime == 0.0 || time < RecordTime)
 	{
 		NewWorldRecord = true;
 	}
-	
+
 	if(LastTimeStatic == 0.0 || time < LastTimeStatic)
 	{
 		NewPersonalRecord = true;
 	}
-	
+
 	new bool:self = false;
-	
+
 	if(currentrank == newrank)
 	{
 		self = true;
 	}
-	
+
 	if(FirstRecord) RankTotal++;
-	
+
 	new Float:wrdiff = time-wrtime;
-	
+
 	new String:BonusString[32];
-	
+
 	if(track == TRACK_BONUS)
 	{
 		FormatEx(BonusString, sizeof(BonusString), " {green}[Bonus]");
 	}
-	else if(track == TRACK_SHORT)
+	else if(track == TRACK_BONUS2)
 	{
-		FormatEx(BonusString, sizeof(BonusString), " {green}[Short]");
-	}	
-	
+		FormatEx(BonusString, sizeof(BonusString), " {green}bonus2");
+	}
+	else if(track == TRACK_BONUS3)
+	{
+		FormatEx(BonusString, sizeof(BonusString), " {green}bonus3");
+	}
+	else if(track == TRACK_BONUS4)
+	{
+		FormatEx(BonusString, sizeof(BonusString), " {green}bonus4");
+	}
+	else if(track == TRACK_BONUS5)
+	{
+		FormatEx(BonusString, sizeof(BonusString), " {green}bonus5");
+	}
+
 	new String:RankString[128], String:RankPwndString[128];
 
 	new bool:bAll = false;
-	
+
 	decl String:StyleString[128];
-	
+
 	if(g_StyleCount > 0 && !g_Settings[MultimodeEnable])
 		FormatEx(StyleString, sizeof(StyleString), " {green}[%s]", g_Physics[style][StyleName]);
-	
-	if(g_Settings[MultimodeEnable]) 
+
+	if(g_Settings[MultimodeEnable])
 		FormatEx(StyleString, sizeof(StyleString), " {green}[%s]", g_Physics[style][StyleName]);
-	
+
 	if(NewWorldRecord)
 	{
 		bAll = true;
 		FormatEx(RankString, sizeof(RankString), "\n{magenta}New WR!");
-		
+
 		if(wrtime > 0.0)
 		{
 			if(self)
@@ -217,16 +229,16 @@ public OnTimerRecord(client, track, style, Float:time, Float:lasttime, currentra
 	{
 		bAll = true;
 		FormatEx(RankString, sizeof(RankString), "{yellow}#%d/%d", newrank, RankTotal);
-		
+
 		if(newrank < currentrank) Format(RankPwndString, sizeof(RankPwndString), "{blue}Beaten {blue}%s{blue}! {yellow}[%s]{blue} by {yellow}[%.2fs]", WrName, WrTime, wrdiff);
-	}	
+	}
 	else if(NewPersonalRecord)
 	{
 		FormatEx(RankString, sizeof(RankString), "{orange}#%d/%d", newrank, RankTotal);
-		
+
 		FormatEx(RankPwndString, sizeof(RankPwndString), "You have improved yourself! {yellow}[%s]{blue} by {yellow}[%.2fs]", WrTime, wrdiff);
 	}
-	
+
 	if(ranked)
 	{
 		if(FirstRecord)
