@@ -593,7 +593,7 @@ public OnClientDisconnect(client)
 			CPrintToChatAll("%s{lightred}%s {olive}disconnected with {lightred}%d {olive}points {lightred}(%s%d).", sNameBuffer, g_sName[client], points, sPre, points-points_start);
 			#else
 			CReplaceColorCodes(sNameBuffer, client, false, 1024);
-			CPrintToChatAll("%s{red}%s {green}disconnected with {yellow}%d {green}points {yellow}(%s%d).", sNameBuffer, g_sName[client], points, sPre, points-points_start);
+			CPrintToChatAll("%s{red}%s {green}disconnected with {olive}%d {green}points {olive}(%s%d).", sNameBuffer, g_sName[client], points, sPre, points-points_start);
 			#endif
 		}
 	}
@@ -1615,7 +1615,7 @@ ShowConnectMsg(client)
 	{
 		#if defined LEGACY_COLORS
 		CFormat(sNameBuffer, 1024, client);
-		CPrintToChatAll("%s%N: {default}rank {yellow}%d/%d {default}with {yellow}%d points {default}connected from {lightgreen}%s{default}.", sNameBuffer, client, g_iCurrentRank[client], g_iTotalPlayers, g_iCurrentPoints[client], s_Country);
+		CPrintToChatAll("%s%N: {green}rank {olive}%d/%d {green}with {olive}%d points {green}connected from {lightgreen}%s{green}.", sNameBuffer, client, g_iCurrentRank[client], g_iTotalPlayers, g_iCurrentPoints[client], s_Country);
 		#else
 		CReplaceColorCodes(sNameBuffer, client, false, 1024);
 		CPrintToChatAll("%s%N {green}[{yellow}%d points{green}] connected from %s.", sNameBuffer, client, g_iCurrentPoints[client], s_Country);
