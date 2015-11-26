@@ -2451,40 +2451,58 @@ public OnClientDisconnect_Post(client)
 //Credits to 1NutWunDeR
 public Action:CheckRemainingTime(Handle:timer)
 {
-	new Handle:hTmp;
+	new Handle:hTmp;	
 	hTmp = FindConVar("mp_timelimit");
-	new iTimeLimit = GetConVarInt(hTmp);
+	new iTimeLimit = GetConVarInt(hTmp);			
 	if (hTmp != INVALID_HANDLE)
-		CloseHandle(hTmp);
+		CloseHandle(hTmp);	
 	if (iTimeLimit > 0)
 	{
 		new timeleft;
 		GetMapTimeLeft(timeleft);
-
-		new tier;
-		if(g_timerMapTier)
-			tier = Timer_GetTier(TRACK_NORMAL);
-
-		decl String:sTier[32];
-		Format(sTier, sizeof(sTier), " Tier: %d", tier);
-
-		switch(timeleft)
+		
+		if(GetEngineVersion() == Engine_CSGO)
 		{
-			case 1800: CPrintToChatAll("Current Map: %s%s Time Remaining: 30 minutes", g_currentMap, sTier);
-			case 1200: CPrintToChatAll("Current Map: %s%s Time Remaining: 20 minutes", g_currentMap, sTier);
-			case 600: CPrintToChatAll("Current Map: %s%s Time Remaining: 10 minutes", g_currentMap, sTier);
-			case 300: CPrintToChatAll("Current Map: %s%s Time Remaining: 5 minutes", g_currentMap, sTier);
-			case 120: CPrintToChatAll("Current Map: %s%s Time Remaining: 2 minutes", g_currentMap, sTier);
-			case 60: CPrintToChatAll("Current Map: %s%s Time Remaining: 60 seconds", g_currentMap, sTier);
-			case 30: CPrintToChatAll("Current Map: %s%s Time Remaining: 30 seconds", g_currentMap, sTier);
-			case 15: CPrintToChatAll("Current Map: %s%s Time Remaining: 15 seconds", g_currentMap, sTier);
-			case -1: CPrintToChatAll("3..");
-			case -2: CPrintToChatAll("2..");
-			case -3: CPrintToChatAll("1..");
+			switch(timeleft)
+			{
+				case 1800: PrintToChatAll("[%cMAP%c] 30 minutes remaining",LIGHTRED,WHITE);
+				case 1200: PrintToChatAll("[%cMAP%c] 20 minutes remaining",LIGHTRED,WHITE);
+				case 600: PrintToChatAll("[%cMAP%c] 10 minutes remaining",LIGHTRED,WHITE);
+				case 300: PrintToChatAll("[%cMAP%c] 5 minutes remaining",LIGHTRED,WHITE);
+				case 120: PrintToChatAll("[%cMAP%c] 2 minutes remaining",LIGHTRED,WHITE);
+				case 60: PrintToChatAll("[%cMAP%c] 60 seconds remaining",LIGHTRED,WHITE); 
+				case 30: PrintToChatAll("[%cMAP%c] 30 seconds remaining",LIGHTRED,WHITE);
+				case 15: PrintToChatAll("[%cMAP%c] 15 seconds remaining",LIGHTRED,WHITE);			
+				case -1: PrintToChatAll("[%cMAP%c] 3..",LIGHTRED,WHITE);
+				case -2: PrintToChatAll("[%cMAP%c] 2..",LIGHTRED,WHITE);
+				case -3:
+				{
+					PrintToChatAll("[%cMAP%c] 1..",LIGHTRED,WHITE);
+					CreateTimer(1.0, TerminateRoundTimer, INVALID_HANDLE, TIMER_FLAG_NO_MAPCHANGE);				
+				}
+			}
 		}
-
-		if(timeleft < -3 && !g_bAllowRoundEnd)
-			CreateTimer(0.0, TerminateRoundTimer, INVALID_HANDLE, TIMER_FLAG_NO_MAPCHANGE);
+		else
+		{
+			switch(timeleft)
+			{
+				case 1800: CPrintToChatAll("[MAP] 30 minutes remaining");
+				case 1200: CPrintToChatAll("[MAP] 20 minutes remaining");
+				case 600: CPrintToChatAll("[MAP] 10 minutes remaining");
+				case 300: CPrintToChatAll("[MAP] 5 minutes remaining");
+				case 120: CPrintToChatAll("[MAP] 2 minutes remaining");
+				case 60: CPrintToChatAll("[MAP] 60 seconds remaining");
+				case 30: CPrintToChatAll("[MAP] 30 seconds remaining");
+				case 15: CPrintToChatAll("[MAP] 15 seconds remaining");
+				case -1: CPrintToChatAll("[MAP] 3..");
+				case -2: CPrintToChatAll("[MAP] 2..");
+				case -3:
+				{
+					PrintToChatAll("[MAP] 1..");
+					CreateTimer(1.0, TerminateRoundTimer, INVALID_HANDLE, TIMER_FLAG_NO_MAPCHANGE);				
+				}
+			}
+		}
 	}
 }
 
@@ -2508,11 +2526,11 @@ public Action:CS_OnTerminateRound(&Float:delay, &CSRoundEndReason:reason)
 		g_bAllowRoundEnd = false;
 		return Plugin_Continue;
 	}
-
+	
 	// Block round end
 	if(g_Settings[TerminateRoundEnd])
 		return Plugin_Handled;
-
+	
 	// Let the round end
 	return Plugin_Continue;
 }
