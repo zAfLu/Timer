@@ -1,5 +1,6 @@
 **General Info**
 
+* Its a Fork of https://github.com/zAfLu/Timer
 * The plugin's code is based on Alongub's [Old Timer 1.0.7] (https://forums.alliedmods.net/showthread.php?t=189751).
 * Timer 1.x and 2.0.x records can be converted for a donation, 
  * But it's better to start with a fresh database if you have used an older version as 2.1.3
@@ -25,9 +26,7 @@
 * Additional various requirements for some modules
 
 **Problems?**
-* If you have trouble goto our [WIKI] (https://github.com/Zipcore/Timer/wiki) / [FAQ] (https://github.com/Zipcore/Timer/wiki/FAQ) page first.
-* You can also use our install serive provided by Rop if you want to be sure the timer is installed correctly.
-* If you have still no clue you can ask for help [here] (https://github.com/Zipcore/Timer/issues/new).
+* If you have still no clue you can ask for help [here] (https://github.com/0blu/Timer/issues/new).
 
 //////////////////////////////
 /////INSTALL INSTRUCTIONS/////
