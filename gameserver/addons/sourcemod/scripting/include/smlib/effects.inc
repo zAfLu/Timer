@@ -117,7 +117,11 @@ stock Effect_Fade(entity, fadeOut=true, kill=false, fast=true, EffectCallback:ca
 		
 		WritePackCell(dataPack, EntIndexToEntRef(entity));
 		WritePackCell(dataPack, kill);
+#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+		WritePackFunction(dataPack, callback);
+#else
 		WritePackCell(dataPack, _:callback);
+#endif
 		WritePackCell(dataPack, data);
 		ResetPack(dataPack);
 	}
@@ -159,7 +163,11 @@ public Action:_smlib_Timer_Effect_Fade(Handle:Timer, Handle:dataPack)
 {
 	new entity = ReadPackCell(dataPack);
 	new kill = ReadPackCell(dataPack);
-	new EffectCallback:callback = EffectCallback:ReadPackCell(dataPack);
+#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 7
+	new Function:callback = ReadPackFunction(dataPack);
+#else
+	new Function:callback = Function:ReadPackCell(dataPack);
+#endif
 	new any:data = any:ReadPackCell(dataPack);
 	
 	if (callback != INVALID_FUNCTION) {
@@ -545,8 +553,8 @@ stock Effect_DrawBeamBoxRotatable(
 stock Effect_DrawAxisOfRotationToClient(
 	client,
 	const Float:origin[3],
-	const Float:length[3],
 	const Float:angles[3],
+	const Float:length[3],
 	modelIndex,
 	haloIndex,
 	startFrame=0,
@@ -560,7 +568,7 @@ stock Effect_DrawAxisOfRotationToClient(
 ) {
     new clients[1];
     clients[0] = client;
-    Effect_DrawAxisOfRotation(clients, 1, origin, length, angles, modelIndex, haloIndex, startFrame, frameRate, life, width, endWidth, fadeLength, amplitude, speed);
+    Effect_DrawAxisOfRotation(clients, 1, origin, angles, length, modelIndex, haloIndex, startFrame, frameRate, life, width, endWidth, fadeLength, amplitude, speed);
 }
 
 /**
@@ -584,8 +592,8 @@ stock Effect_DrawAxisOfRotationToClient(
  */
 stock Effect_DrawAxisOfRotationToAll(
 	const Float:origin[3],
-	const Float:length[3],
 	const Float:angles[3],
+	const Float:length[3],
 	modelIndex,
 	haloIndex,
 	startFrame=0,
@@ -601,7 +609,7 @@ stock Effect_DrawAxisOfRotationToAll(
 	new clients[MaxClients];
 	new numClients = Client_Get(clients, CLIENTFILTER_INGAME);
 
-	Effect_DrawAxisOfRotation(clients, numClients, origin, length, angles, modelIndex, haloIndex, startFrame, frameRate, life, width, endWidth, fadeLength, amplitude, speed);
+	Effect_DrawAxisOfRotation(clients, numClients, origin, angles, length, modelIndex, haloIndex, startFrame, frameRate, life, width, endWidth, fadeLength, amplitude, speed);
 }
 
 /**
