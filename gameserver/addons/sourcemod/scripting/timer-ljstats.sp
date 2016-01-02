@@ -428,9 +428,9 @@ public Action:Touch_Wall(ent,client)
 	}
 	return Plugin_Continue;
 }
-public Action:event_jump(Handle:Event, const String:Name[], bool:Broadcast)
+public Action:event_jump(Handle:ArgEvent, const String:Name[], bool:Broadcast)
 {
-	new client = GetClientOfUserId(GetEventInt(Event, "userid"));
+	new client = GetClientOfUserId(GetEventInt(ArgEvent, "userid"));
 	if(g_bLJmode[client])
 	{
 		if(PlayerReadyType[client] != ReadyType_None)
@@ -475,21 +475,21 @@ public Action:event_jump(Handle:Event, const String:Name[], bool:Broadcast)
 		}
 	}
 }
-public Action:event_team(Handle:Event, const String:Name[], bool:Broadcast)
+public Action:event_team(Handle:ArgEvent, const String:Name[], bool:Broadcast)
 {
-	new client = GetClientOfUserId(GetEventInt(Event, "userid"));
+	new client = GetClientOfUserId(GetEventInt(ArgEvent, "userid"));
 	if(client != 0)
 	{
 		if(IsClientInGame(client))
 		{
-			if(GetEventInt(Event, "team")==1)
+			if(GetEventInt(ArgEvent, "team")==1)
 			{
 				g_bLJmode[client] = false;
 			}
 		}
 	}
 }
-public Action:event_roundstart(Handle:Event, const String:Name[], bool:Broadcast)
+public Action:event_roundstart(Handle:ArgEvent, const String:Name[], bool:Broadcast)
 {
 	FindNHookWalls();//i don't know why. but better hook after level completely loaded.
 	HookTrigger();

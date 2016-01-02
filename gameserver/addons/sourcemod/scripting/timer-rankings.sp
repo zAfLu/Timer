@@ -415,7 +415,7 @@ ConnectSQL()
 		{
 			if(IsClientInGame(i) && !IsFakeClient(i))
 			{
-				g_bAuthed[i] = GetClientAuthString(i, g_sAuth[i], sizeof(g_sAuth[]));
+				g_bAuthed[i] = GetClientAuthId(i, AuthId_Steam2, g_sAuth[i], sizeof(g_sAuth[]));
 				if(!g_bAuthed[i])
 					CreateTimer(2.0, Timer_AuthClient, GetClientUserId(i), TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 				else
@@ -486,7 +486,7 @@ public OnClientPostAdminCheck(client)
 	
 	g_bCheck[client] = true;
 	
-	g_bAuthed[client] = GetClientAuthString(client, g_sAuth[client], sizeof(g_sAuth[]));
+	g_bAuthed[client] = GetClientAuthId(client, AuthId_Steam2, g_sAuth[client], sizeof(g_sAuth[]));
 	
 	//Position method 2 is using no points and the plugin does not fire the connect msg, retry on Timer_AuthClient
 	if(g_bAuthed[client] && g_iPositionMethod == 2)
@@ -2462,7 +2462,7 @@ public Action:Timer_AuthClient(Handle:timer, any:userid)
 	new client = GetClientOfUserId(userid);
 	if(IsClientInGame(client))
 	{
-		g_bAuthed[client] = GetClientAuthString(client, g_sAuth[client], sizeof(g_sAuth[]));
+		g_bAuthed[client] = GetClientAuthId(client, AuthId_Steam2, g_sAuth[client], sizeof(g_sAuth[]));
 		if(!g_bAuthed[client])
 			return Plugin_Continue;
 		else

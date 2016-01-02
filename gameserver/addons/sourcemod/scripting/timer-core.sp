@@ -28,11 +28,11 @@ new bool:g_timerTeams = false;
 new bool:g_timerWorldRecord = false;
 new bool:g_Botmimic = false;
 
-/** 
+/**
  * Global Enums
  */
- 
-enum Timer
+
+enum CsTimer
 {
 	Enabled,
 	Float:StartTime,
@@ -66,7 +66,7 @@ new String:g_currentMap[64];
 
 new g_GetPauseLevel[MAXPLAYERS+1];
 
-new g_timers[MAXPLAYERS+1][Timer];
+new g_timers[MAXPLAYERS+1][CsTimer];
 new g_bestTimeCache[MAXPLAYERS+1][BestTimeCacheEntity];
 
 new Handle:g_timerStartedForward;
@@ -97,7 +97,7 @@ public Plugin:myinfo =
 public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 {
 	RegPluginLibrary("timer");
-	
+
 	CreateNative("Timer_Reset", Native_Reset);
 	CreateNative("Timer_Start", Native_Start);
 	CreateNative("Timer_Stop", Native_Stop);
@@ -126,43 +126,43 @@ public OnPluginStart()
 	ConnectSQL();
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	CreateConVar("timer_version", PL_VERSION, "Timer Version", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
-	
+
 	RegConsoleCmd("sm_credits", Command_Credits);
 	mod = GetGameMod();
-	
+
 	g_timerStartedForward = CreateGlobalForward("OnTimerStarted", ET_Event, Param_Cell);
 	g_timerStoppedForward = CreateGlobalForward("OnTimerStopped", ET_Event, Param_Cell);
 	g_timerRestartForward = CreateGlobalForward("OnTimerRestart", ET_Event, Param_Cell);
 	g_timerPausedForward = CreateGlobalForward("OnTimerPaused", ET_Event, Param_Cell);
 	g_timerResumedForward = CreateGlobalForward("OnTimerResumed", ET_Event, Param_Cell);
-	
+
 	g_timerWorldRecordForward = CreateGlobalForward("OnTimerWorldRecord", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_timerPersonalRecordForward = CreateGlobalForward("OnTimerPersonalRecord", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_timerTop10RecordForward = CreateGlobalForward("OnTimerTop10Record", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_timerFirstRecordForward = CreateGlobalForward("OnTimerFirstRecord", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_timerRecordForward = CreateGlobalForward("OnTimerRecord", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_OnClientChangeStyle = CreateGlobalForward("OnClientChangeStyle", ET_Event, Param_Cell, Param_Cell, Param_Cell);
-	
+
 	g_iVelocity = FindSendPropInfo("CBasePlayer", "m_vecVelocity[0]");
-	
+
 	LoadTranslations("timer.phrases");
-	
+
 	if(g_Settings[PauseEnable])
-	{ 
+	{
 		RegConsoleCmd("sm_pause", Command_Pause);
 		RegConsoleCmd("sm_resume", Command_Resume);
 	}
 
 	RegAdminCmd("sm_droptable", Command_DropTable, ADMFLAG_ROOT);
-	
+
 	HookEvent("player_jump", Event_PlayerJump);
 	HookEvent("player_death", Event_StopTimer);
 	HookEvent("player_team", Event_StopTimer);
 	HookEvent("player_spawn", Event_StopTimer);
 	HookEvent("player_disconnect", Event_StopTimer);
-	
+
 
 	g_timerLogging = LibraryExists("timer-logging");
 	g_timerPhysics = LibraryExists("timer-physics");
@@ -206,7 +206,7 @@ public OnLibraryAdded(const String:name[])
 }
 
 public OnLibraryRemoved(const String:name[])
-{	
+{
 	if (StrEqual(name, "timer-logging"))
 	{
 		g_timerLogging = false;
@@ -241,7 +241,7 @@ public OnClientAuthorized(client, const String:auth[])
 {
 	if (g_hSQL == INVALID_HANDLE)
 		ConnectSQL();
-	
+
 	if (g_hSQL != INVALID_HANDLE)
 	{
 		if(StrContains(auth, "STEAM", true) > -1)
@@ -250,10 +250,10 @@ public OnClientAuthorized(client, const String:auth[])
 			{
 				decl String:name[MAX_NAME_LENGTH];
 				GetClientName(client, name, sizeof(name));
-			
+
 				decl String:safeName[2 * strlen(name) + 1];
 				SQL_EscapeString(g_hSQL, name, safeName, 2 * strlen(name) + 1);
-			
+
 				decl String:query[256];
 				FormatEx(query, sizeof(query), "UPDATE `round` SET name = '%s' WHERE auth = '%s'", safeName, auth);
 
@@ -282,13 +282,13 @@ public PrepareSound(String: sound[MAX_FILE_LEN])
 }
 
 public OnMapStart()
-{	
+{
 	GetCurrentMap(g_currentMap, sizeof(g_currentMap));
 	ClearCache();
-	
+
 	LoadPhysics();
 	LoadTimerSettings();
-	
+
 	for (new client = 1; client <= MaxClients; client++)
 		g_timers[client][Track] = TRACK_NORMAL;
 }
@@ -307,7 +307,7 @@ public Action:Event_PlayerJump(Handle:event, const String:name[], bool:dontBroad
 
 	if (g_timers[client][Enabled] && !g_timers[client][IsPaused])
 		g_timers[client][Jumps]++;
-	
+
 	return Plugin_Continue;
 }
 
@@ -327,7 +327,7 @@ public Action:Event_StopTimerPaused(Handle:event, const String:name[], bool:dont
 public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new client = GetClientOfUserId(GetEventInt(event, "userid"));
-	
+
 	if(0 < client <= MaxClients)
 	{
 		if(IsClientInGame(client))
@@ -339,7 +339,7 @@ public Action:Command_Stop(client, args)
 {
 	if (IsPlayerAlive(client))
 		StopTimer(client, false);
-		
+
 	return Plugin_Handled;
 }
 
@@ -347,7 +347,7 @@ public Action:Command_Pause(client, args)
 {
 	if (g_Settings[PauseEnable] && IsPlayerAlive(client))
 		PauseTimer(client);
-		
+
 	return Plugin_Handled;
 }
 
@@ -355,7 +355,7 @@ public Action:Command_Resume(client, args)
 {
 	if (g_Settings[PauseEnable] && IsPlayerAlive(client))
 		ResumeTimer(client);
-		
+
 	return Plugin_Handled;
 }
 
@@ -363,14 +363,14 @@ public Action:Command_DropTable(client, args)
 {
 	if (g_hSQL == INVALID_HANDLE)
 		ConnectSQL();
-	
+
 	if (g_hSQL != INVALID_HANDLE)
 	{
 		decl String:query[64];
 		FormatEx(query, sizeof(query), "DROP TABLE round");
 		SQL_TQuery(g_hSQL, DropTable, query, _, DBPrio_Normal);
 	}
-	
+
 	return Plugin_Handled;
 }
 
@@ -397,7 +397,7 @@ bool:ResetTimer(client)
 	Call_StartForward(g_timerStoppedForward);
 	Call_PushCell(client);
 	Call_Finish();
-	
+
 	//Stop mate
 	if (g_timerTeams)
 	{
@@ -410,7 +410,7 @@ bool:ResetTimer(client)
 			Call_Finish();
 		}
 	}
-	
+
 	g_timers[client][Enabled] = false;
 	g_timers[client][StartTime] = GetGameTime();
 	g_timers[client][EndTime] = -1.0;
@@ -419,26 +419,26 @@ bool:ResetTimer(client)
 	g_timers[client][PauseStartTime] = 0.0;
 	g_timers[client][PauseTotalTime] = 0.0;
 	g_timers[client][ReplayFile][0] = '\0';
-	
+
 	if(g_timerPhysics) Timer_ResetAccuracy(client);
-	
+
 	return true;
 }
 
 bool:TimerPenalty(client, Float:penaltytime)
 {
 	g_timers[client][StartTime] -= penaltytime;
-	
+
 	return true;
 }
- 
+
 bool:StartTimer(client)
 {
 	if(!IsValidClient(client))
 		return false;
 	if (g_timers[client][Enabled])
 		return false;
-	
+
 	g_timers[client][Enabled] = true;
 	g_timers[client][StartTime] = GetGameTime();
 	g_timers[client][EndTime] = -1.0;
@@ -447,9 +447,9 @@ bool:StartTimer(client)
 	g_timers[client][PauseStartTime] = 0.0;
 	g_timers[client][PauseTotalTime] = 0.0;
 	g_timers[client][ReplayFile][0] = '\0';
-	
+
 	if(g_timerPhysics) Timer_ResetAccuracy(client);
-	
+
 	//Check for custom settings
 	QueryClientConVar(client, "fps_max", FpsMaxCallback, client);
 
@@ -466,25 +466,25 @@ bool:StopTimer(client, bool:stopPaused = true)
 		return false;
 	if (!g_timers[client][Enabled])
 		return false;
-	
+
 	//Already paused?
 	if (!stopPaused && g_timers[client][IsPaused])
 		return false;
-	
+
 	//EmitSoundToClient(client, SND_TIMER_STOP);
-	
+
 	//Get time
 	g_timers[client][Enabled] = false;
 	g_timers[client][EndTime] = GetGameTime();
-	
+
 	//Prevent Resume
 	if (!stopPaused) g_timers[client][IsPaused] = false;
-	
+
 	//Forward Timer_Stopped(client)
 	Call_StartForward(g_timerStoppedForward);
 	Call_PushCell(client);
 	Call_Finish();
-	
+
 	//Stop mate
 	if (g_timerTeams)
 	{
@@ -497,7 +497,7 @@ bool:StopTimer(client, bool:stopPaused = true)
 			Call_Finish();
 		}
 	}
-		
+
 	return true;
 }
 
@@ -505,9 +505,9 @@ bool:RestartTimer(client)
 {
 	if(!IsValidClient(client))
 		return false;
-	
+
 	StopTimer(client, false);
-	
+
 	//Forward Timer_Restarted(client)
 	Call_StartForward(g_timerRestartForward);
 	Call_PushCell(client);
@@ -516,8 +516,8 @@ bool:RestartTimer(client)
 	if (g_timerTeams)
 	{
 		new mate = Timer_GetClientTeammate(client);
-		if(mate != 0) 
-		{	
+		if(mate != 0)
+		{
 			StopTimer(mate, false);
 
 			Call_StartForward(g_timerRestartForward);
@@ -537,13 +537,13 @@ bool:PauseTimer(client)
 		return false;
 	if (!g_timers[client][Enabled] || g_timers[client][IsPaused])
 		return false;
-	
+
 	g_timers[client][IsPaused] = true;
 	g_timers[client][PauseStartTime] = GetGameTime();
 	g_GetPauseLevel[client] = Timer_GetClientLevel(client);
-	
+
 	CreateTimer(0.0, Timer_ValidatePause, client, TIMER_FLAG_NO_MAPCHANGE);
-	
+
 	CPrintToChat(client, PLUGIN_PREFIX, "Pause Info");
 
 	new Float:origin[3];
@@ -561,19 +561,19 @@ bool:PauseTimer(client)
 	Call_StartForward(g_timerPausedForward);
 	Call_PushCell(client);
 	Call_Finish();
-	
-	if(g_timerTeams) 
+
+	if(g_timerTeams)
 	{
 		new mate = Timer_GetClientTeammate(client);
 		if(0 < mate)
 		{
 			g_timers[mate][IsPaused] = true;
 			g_timers[mate][PauseStartTime] = GetGameTime();
-		
+
 			CreateTimer(0.0, Timer_ValidatePause, mate, TIMER_FLAG_NO_MAPCHANGE);
-		
+
 			CPrintToChat(mate, PLUGIN_PREFIX, "Pause Info");
-		
+
 			new Float:origin2[3];
 			GetClientAbsOrigin(mate, origin2);
 			Array_Copy(origin2, g_timers[mate][PauseLastOrigin], 3);
@@ -601,7 +601,7 @@ public Action:Timer_ValidatePause(Handle:timer, any:client)
 	{
 		ResetTimer(client);
 	}
-	
+
 	return Plugin_Stop;
 }
 
@@ -626,12 +626,12 @@ bool:ResumeTimer(client)
 	{
 		SetEntityMoveType(client, MOVETYPE_WALK);
 	}
-	
+
 	TeleportEntity(client, origin, angles, velocity);
-	
+
 	g_timers[client][IsPaused] = false;
 	g_timers[client][PauseTotalTime] += GetGameTime() - g_timers[client][PauseStartTime];
-	
+
 	Timer_SetClientLevel(client, g_GetPauseLevel[client]);
 
 	Call_StartForward(g_timerResumedForward);
@@ -657,7 +657,7 @@ bool:ResumeTimer(client)
 			{
 				SetEntityMoveType(mate, MOVETYPE_WALK);
 			}
-			
+
 			TeleportEntity(mate, origin2, angles2, velocity2);
 
 			g_timers[mate][IsPaused] = false;
@@ -668,7 +668,7 @@ bool:ResumeTimer(client)
 			Call_Finish();
 		}
 	}
-	
+
 	return true;
 }
 
@@ -682,7 +682,7 @@ ClearClientCache(client)
 {
 	g_bestTimeCache[client][IsCached] = false;
 	g_bestTimeCache[client][Jumps] = 0;
-	g_bestTimeCache[client][Time] = 0.0;	
+	g_bestTimeCache[client][Time] = 0.0;
 }
 
 FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
@@ -691,32 +691,32 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 		return;
 	if (IsFakeClient(client))
 		return;
-	
+
 	decl String:auth[32];
-	GetClientAuthString(client, auth, sizeof(auth));
-	
+	GetClientAuthId(client, AuthId_Steam2, auth, sizeof(auth));
+
 	//ignore unranked
-	if(g_timerPhysics) 
+	if(g_timerPhysics)
 		if (g_Physics[style][StyleCategory] != MCategory_Ranked || !(bool:Timer_IsStyleRanked(style)))
 			return;
 
 	new flashbangcount; //TODO
-	
+
 	new stage;
-	
+
 	if(track == TRACK_NORMAL)
 		stage = LEVEL_END;
 	else if(track == TRACK_BONUS)
 		stage = LEVEL_BONUS_END;
 	else
 		stage = Timer_GetClientLevel(client);
-	
+
 	if (time < 1.0)
 	{
 		if(g_timerLogging) Timer_Log(Timer_LogLevelWarning, "Detected illegal record by %N on %s [time:%.2f|style:%d|track:%d|jumps:%d] SteamID: %s", client, g_currentMap, time, style, track, jumps, auth);
 		return;
 	}
-	
+
 	if(g_timerScripterDB)
 	{
 		if (Timer_IsScripter(client))
@@ -730,46 +730,46 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 	new RecordId;
 	new Float:RecordTime;
 	new RankTotal;
-	
+
 	//Personal Record
-	new currentrank, newrank;	
-	if(g_timerWorldRecord) 
+	new currentrank, newrank;
+	if(g_timerWorldRecord)
 	{
-		currentrank = Timer_GetStyleRank(client, track, style);	
+		currentrank = Timer_GetStyleRank(client, track, style);
 		newrank = Timer_GetNewPossibleRank(style, track, time);
 	}
-	
+
 	new Float:LastTime;
 	new Float:LastTimeStatic;
 	new LastJumps;
 	decl String:TimeDiff[32];
 	decl String:buffer[32];
-	
+
 	new bool:NewPersonalRecord = false;
 	new bool:NewWorldRecord = false;
 	new bool:FirstRecord = false;
-	
+
 	new Float:jumpacc;
 	if(g_timerPhysics) Timer_GetJumpAccuracy(client, jumpacc);
-	
+
 	new strafes, strafes_boosted, Float:strafeacc;
-	if(g_timerStrafes) 
+	if(g_timerStrafes)
 	{
 		strafes = Timer_GetStrafeCount(client);
 		strafes_boosted = Timer_GetBoostedStrafeCount(client);
-	
+
 		if(strafes < 1)
 		{
 			strafes = 1;
 		}
-	
+
 		strafeacc = 100.0-(100.0*(float(strafes_boosted)/float(strafes)));
-	}	
-	
+	}
+
 	//get speed
 	new Float:maxspeed, Float:currentspeed, Float:avgspeed;
-	if(g_timerPhysics) 
-	{	
+	if(g_timerPhysics)
+	{
 		Timer_GetMaxSpeed(client, maxspeed);
 		Timer_GetCurrentSpeed(client, currentspeed);
 		Timer_GetAvgSpeed(client, avgspeed);
@@ -779,22 +779,22 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 
 	decl String:name[MAX_NAME_LENGTH];
 	GetClientName(client, name, sizeof(name));
-	
+
 	decl String:safeName[2 * strlen(name) + 1];
 
 	if (g_hSQL == INVALID_HANDLE)
 		ConnectSQL();
-	
+
 	if (g_hSQL != INVALID_HANDLE)
 	{
 		SQL_EscapeString(g_hSQL, name, safeName, 2 * strlen(name) + 1);
 	}
-	
+
 	/* Get Personal Record */
 	if(g_timerWorldRecord && Timer_GetBestRound(client, style, track, LastTime, LastJumps))
 	{
 		LastTimeStatic = LastTime;
-		LastTime -= time;			
+		LastTime -= time;
 		if(LastTime < 0.0)
 		{
 			LastTime *= -1.0;
@@ -824,18 +824,18 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 
 	/* Get World Record */
 	if(g_timerWorldRecord) Timer_GetStyleRecordWRStats(style, track, RecordId, RecordTime, RankTotal);
-	
+
 	/* Detect Record Type */
 	if(RecordTime == 0.0 || time < RecordTime)
 	{
 		NewWorldRecord = true;
 	}
-	
+
 	if(LastTimeStatic == 0.0 || time < LastTimeStatic)
 	{
 		NewPersonalRecord = true;
 	}
-	
+
 	/* Forwards */
 	Call_StartForward(g_timerRecordForward);
 	Call_PushCell(client);
@@ -846,7 +846,7 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 	Call_PushCell(currentrank);
 	Call_PushCell(newrank);
 	Call_Finish();
-	
+
 	if(NewWorldRecord)
 	{
 		Call_StartForward(g_timerWorldRecordForward);
@@ -859,7 +859,7 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 		Call_PushCell(newrank);
 		Call_Finish();
 	}
-	
+
 	if(NewPersonalRecord)
 	{
 		Call_StartForward(g_timerPersonalRecordForward);
@@ -872,7 +872,7 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 		Call_PushCell(newrank);
 		Call_Finish();
 	}
-	
+
 	if(newrank <= 10)
 	{
 		Call_StartForward(g_timerTop10RecordForward);
@@ -885,7 +885,7 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 		Call_PushCell(newrank);
 		Call_Finish();
 	}
-	
+
 	if(FirstRecord)
 	{
 		Call_StartForward(g_timerFirstRecordForward);
@@ -898,7 +898,7 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 		Call_PushCell(newrank);
 		Call_Finish();
 	}
-	
+
 	if(g_Botmimic)
 	{
 		if(NewWorldRecord)
@@ -910,7 +910,7 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 				Timer_GetReplayPath(style, track, currentrank, path, sizeof(path));
 				BotMimic_DeleteRecord(path);
 			}
-			
+
 			//Delete old replay file
 			decl String:wrpath[256];
 			Timer_GetReplayPath(style, track, 1, wrpath, sizeof(wrpath));
@@ -924,7 +924,7 @@ FinishRound(client, const String:map[], Float:time, jumps, style, fpsmax, track)
 			BotMimic_DeleteRecord(path);
 		}
 	}
-	
+
 	if (g_hSQL != INVALID_HANDLE)
 	{
 		if(FirstRecord || NewPersonalRecord)
@@ -947,21 +947,21 @@ public BotMimic_OnRecordSaved(client, String:name[], String:category[], String:s
 {
 	decl String:buffer[32], String:filename[256];
 	Format(filename, sizeof(filename), "%s", file);
-	
+
 	//Clear the path to get the filename only
 	Format(buffer, sizeof(buffer), "/%d_%d/", Timer_GetStyle(client), Timer_GetTrack(client));
 	ReplaceString(filename, sizeof(filename), buffer, "", true);
 	ReplaceString(filename, sizeof(filename), "addons/sourcemod/data/botmimic", "", true);
-	GetClientAuthString(client, buffer, sizeof(buffer), true);
+	GetClientAuthId(client, AuthId_Steam2, buffer, sizeof(buffer), true);
 	ReplaceString(buffer, sizeof(buffer), ":", "_", true);
 	ReplaceString(filename, sizeof(filename), buffer, "", true);
 	ReplaceString(filename, sizeof(filename), g_currentMap, "", true);
 	ReplaceString(filename, sizeof(filename), ".rec", "", true);
 	ReplaceString(filename, sizeof(filename), "/", "", true);
-	
+
 	if(!String_IsNumeric(filename))
 		Format(filename, sizeof(filename), "-1");
-	
+
 	FormatEx(g_timers[client][ReplayFile], 32, "%s", filename);
 }
 
@@ -973,7 +973,7 @@ public UpdateNameCallback(Handle:owner, Handle:hndl, const String:error[], any:p
 		return;
 	}
 
-	if (g_timerWorldRecord) 
+	if (g_timerWorldRecord)
 	{
 		Timer_ForceReloadCache();
 	}
@@ -997,7 +997,7 @@ public FinishRoundCallback(Handle:owner, Handle:hndl, const String:error[], any:
 	}
 
 	g_bestTimeCache[client][IsCached] = false;
-	
+
 	if(g_timerWorldRecord) Timer_ForceReloadCache();
 }
 
@@ -1006,7 +1006,7 @@ Float:CalculateTime(client)
 	if (g_timers[client][Enabled] && g_timers[client][IsPaused])
 		return g_timers[client][PauseStartTime] - g_timers[client][StartTime] - g_timers[client][PauseTotalTime];
 	else
-		return (g_timers[client][Enabled] ? GetGameTime() : g_timers[client][EndTime]) - g_timers[client][StartTime] - g_timers[client][PauseTotalTime];	
+		return (g_timers[client][Enabled] ? GetGameTime() : g_timers[client][EndTime]) - g_timers[client][StartTime] - g_timers[client][PauseTotalTime];
 }
 
 public OnTimerSqlConnected(Handle:sql)
@@ -1025,7 +1025,7 @@ public OnTimerSqlStop()
 ConnectSQL()
 {
 	g_hSQL = Handle:Timer_SqlGetConnection();
-	
+
 	if (g_hSQL == INVALID_HANDLE)
 		CreateTimer(0.1, Timer_SQLReconnect, _ , TIMER_FLAG_NO_MAPCHANGE);
 	else Timer_LogInfo("[Timer] MySQL connection established and conneted to timer-core.");
@@ -1076,11 +1076,11 @@ public Native_Pause(Handle:plugin, numParams)
 public Native_GetClientTimer(Handle:plugin, numParams)
 {
 	new client = GetNativeCell(1);
-	
+
 	SetNativeCellRef(2, g_timers[client][Enabled]);
 	SetNativeCellRef(3, CalculateTime(client));
 	SetNativeCellRef(4, g_timers[client][Jumps]);
-	SetNativeCellRef(5, g_timers[client][FpsMax]);	
+	SetNativeCellRef(5, g_timers[client][FpsMax]);
 
 	return true;
 }
@@ -1091,13 +1091,13 @@ public Native_FinishRound(Handle:plugin, numParams)
 
 	decl String:map[32];
 	GetNativeString(2, map, sizeof(map));
-	
+
 	new Float:time = GetNativeCell(3);
 	new jumps = GetNativeCell(4);
 	new style = GetNativeCell(5);
 	new fpsmax = GetNativeCell(6);
 	new track = GetNativeCell(7);
-	
+
 	FinishRound(client, map, time, jumps, style, fpsmax, track);
 }
 
@@ -1126,7 +1126,7 @@ public Native_SetStyle(Handle:plugin, numParams)
 	Call_PushCell(style);
 	Call_Finish();
 	g_timers[client][CurrentStyle] = style;
-	
+
 	if(g_timerPhysics) Timer_ApplyPhysics(client);
 }
 
@@ -1161,7 +1161,7 @@ public Native_GetClientActiveReplayPath(Handle:plugin, numParams)
 {
 	new client = GetNativeCell(1);
 	decl String:path[256], String:auth[64];
-	GetClientAuthString(client, auth, sizeof(auth), true);
+	GetClientAuthId(client, AuthId_Steam2, auth, sizeof(auth), true);
 	Format(path, sizeof(path), "addons/sourcemod/data/botmimic/%d_%d/%s/%s/%s.rec", g_timers[client][CurrentStyle], g_timers[client][Track], g_currentMap, auth, g_timers[client][ReplayFile]);
 	ReplaceString(path, sizeof(path), ":", "_", true);
 	SetNativeString(2, path, 256);
@@ -1188,7 +1188,7 @@ stock GetClientAbsVelocity(client, Float:vecVelocity[3])
 public Action:Command_Credits(client, args)
 {
 	CreditsPanel(client);
-	
+
 	return Plugin_Handled;
 }
 
@@ -1196,10 +1196,10 @@ public CreditsPanel(client)
 {
 	new Handle:panel = CreatePanel();
 	SetPanelTitle(panel, "- Timer Credits -");
-	
+
 	if(mod == MOD_CSGO) SetPanelCurrentKey(panel, 8);
 	else SetPanelCurrentKey(panel, 9);
-	
+
 	DrawPanelText(panel, "     -- Page 1/4 --");
 	DrawPanelText(panel, " ");
 	DrawPanelText(panel, "Zipcore - Creator and main coder of this plugin");
@@ -1222,7 +1222,7 @@ public CreditsHandler1 (Handle:menu, MenuAction:action,param1, param2)
 {
     if ( action == MenuAction_Select )
     {
-		if(mod == MOD_CSGO) 
+		if(mod == MOD_CSGO)
 		{
 			switch (param2)
 			{
@@ -1249,10 +1249,10 @@ public CreditsPanel2(client)
 {
 	new Handle:panel = CreatePanel();
 	SetPanelTitle(panel, "- Timer Credits -");
-	
+
 	if(mod == MOD_CSGO) SetPanelCurrentKey(panel, 7);
 	else SetPanelCurrentKey(panel, 8);
-	
+
 	DrawPanelText(panel, "     -- Page 2/4 --");
 	DrawPanelText(panel, " ");
 	DrawPanelText(panel, "DaFox - MP bunny hops");
@@ -1275,7 +1275,7 @@ public CreditsHandler2 (Handle:menu, MenuAction:action,param1, param2)
 {
     if ( action == MenuAction_Select )
     {
-		if(mod == MOD_CSGO) 
+		if(mod == MOD_CSGO)
 		{
 			switch (param2)
 			{
@@ -1310,10 +1310,10 @@ public CreditsPanel3(client)
 {
 	new Handle:panel = CreatePanel();
 	SetPanelTitle(panel, "- Timer Credits -");
-	
+
 	if(mod == MOD_CSGO) SetPanelCurrentKey(panel, 7);
 	else SetPanelCurrentKey(panel, 8);
-	
+
 	DrawPanelText(panel, "     -- Page 3/4 --");
 	DrawPanelText(panel, " ");
 	DrawPanelText(panel, "Jason Bourne - Challenge, Custom-HUD");
@@ -1335,7 +1335,7 @@ public CreditsHandler3 (Handle:menu, MenuAction:action,param1, param2)
 {
     if ( action == MenuAction_Select )
     {
-		if(mod == MOD_CSGO) 
+		if(mod == MOD_CSGO)
 		{
 			switch (param2)
 			{
@@ -1370,17 +1370,17 @@ public CreditsPanel4(client)
 {
 	new Handle:panel = CreatePanel();
 	SetPanelTitle(panel, "- Timer Credits -");
-	
+
 	if(mod == MOD_CSGO) SetPanelCurrentKey(panel, 7);
 	else SetPanelCurrentKey(panel, 8);
-	
+
 	DrawPanelText(panel, "     -- Page 4/4 --");
 	DrawPanelText(panel, "JKab - France translation");
 	DrawPanelText(panel, "Rop - Dutch Translation & much more");
 	DrawPanelText(panel, "");
 	DrawPanelText(panel, "   ---- Special Thanks ----");
 	DrawPanelText(panel, "Schoschy, .#IsKulT, Shadow^_^,");
-	DrawPanelText(panel, "Joy. Extan, -XP.| Mr.loser ™.K.W.©,");
+	DrawPanelText(panel, "Joy. Extan, -XP.| Mr.loser ï¿½.K.W.ï¿½,");
 	DrawPanelText(panel, "");
 	DrawPanelText(panel, " and many others.");
 	DrawPanelText(panel, " ");
@@ -1396,7 +1396,7 @@ public CreditsHandler4 (Handle:menu, MenuAction:action,param1, param2)
 {
     if ( action == MenuAction_Select )
     {
-		if(mod == MOD_CSGO) 
+		if(mod == MOD_CSGO)
 		{
 			switch (param2)
 			{
