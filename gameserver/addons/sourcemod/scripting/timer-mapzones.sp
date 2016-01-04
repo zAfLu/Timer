@@ -3151,7 +3151,7 @@ stock CheckIllegalTeleport(client)
 	return false;
 }
 
-stock CreateNPC(client, step, bool:double = false)
+stock CreateNPC(client, step, bool:copy = false)
 {
 	if (0 < client < MaxClients)
 	{
@@ -3199,7 +3199,7 @@ stock CreateNPC(client, step, bool:double = false)
 			new Float:point2[3];
 			Array_Copy(g_mapZoneEditors[client][Point2], point2, 3);
 
-			if(!double)
+			if(!copy)
 			{
 				if(!AddMapZone(g_currentMap, MapZoneType:ZtNPC_Next, lvlbuffer, hcount, point1, point2))
 					PrintToChat(client, "[Timer] Can't save NPC, no database connection.");

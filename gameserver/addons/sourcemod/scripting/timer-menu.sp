@@ -37,9 +37,9 @@ public OnMapStart()
 	GetCurrentMap(g_sCurrentMap, sizeof(g_sCurrentMap));
 }
 
-public Action:Command_Menu(client, args)
+public Action:Command_Menu(argClient, args)
 {
-	Menu(client);
+	MainMenu(argClient);
 
 	return Plugin_Handled;
 }
@@ -56,12 +56,12 @@ new g_Commands[512][eCommand];
 new g_iCurrentPage[MAXPLAYERS+1];
 new maxpage;
 
-public Action:Command_HelpMenu(client, args)
+public Action:Command_HelpMenu(argClient, args)
 {
-	//HelpPanel(client);
+	//HelpPanel(argClient);
 	Init_Commands();
-	g_iCurrentPage[client] = 1;
-	CommandPanel(client);
+	g_iCurrentPage[argClient] = 1;
+	CommandPanel(argClient);
 
 	return Plugin_Handled;
 }
@@ -130,22 +130,22 @@ Add_Command(String:info[], String:plugin[], bool:enable = true)
 	}
 }
 
-public CommandPanel(client)
+public CommandPanel(argClient)
 {
-	new firstcomand = g_iCurrentPage[client]*commandsperpage-commandsperpage;
+	new firstcomand = g_iCurrentPage[argClient]*commandsperpage-commandsperpage;
 
 	new Handle:panel = CreatePanel();
 	SetPanelTitle(panel, ">>> Timer Help Menu <<<\nby Zipcore");
 
 	new String:sPage[512];
-	Format(sPage, sizeof(sPage), "         -- Page %d/%d --", g_iCurrentPage[client], maxpage);
+	Format(sPage, sizeof(sPage), "         -- Page %d/%d --", g_iCurrentPage[argClient], maxpage);
 
 	DrawPanelText(panel, sPage);
 	DrawPanelText(panel, " ");
 
 	new String:buffer[512];
 	new iCmdCount;
-	for(new i=firstcomand; i < (g_iCurrentPage[client]*commandsperpage); i++)
+	for(new i=firstcomand; i < (g_iCurrentPage[argClient]*commandsperpage); i++)
 	{
 		Format(buffer, sizeof(buffer), "%s", g_Commands[i][eCommand_Info]);
 		DrawPanelText(panel, buffer);
@@ -156,27 +156,27 @@ public CommandPanel(client)
 
 
 	new startkey = 8;
-	if(g_iCurrentPage[client] > 1)
+	if(g_iCurrentPage[argClient] > 1)
 		startkey = 7;
 
 	//Fix CS:GO menu buttons
 	if(mod == MOD_CSGO) SetPanelCurrentKey(panel, startkey);
 	else SetPanelCurrentKey(panel, startkey+1);
 
-	if(g_iCurrentPage[client] > 1) DrawPanelItem(panel, "- Back -");
+	if(g_iCurrentPage[argClient] > 1) DrawPanelItem(panel, "- Back -");
 	else DrawPanelText(panel, " ");
-	if(g_iCurrentPage[client] < maxpage) DrawPanelItem(panel, "- Next -");
+	if(g_iCurrentPage[argClient] < maxpage) DrawPanelItem(panel, "- Next -");
 	else DrawPanelText(panel, " ");
 
 	SetPanelCurrentKey(panel, 9);
 	DrawPanelItem(panel, "- Exit -");
 
-	SendPanelToClient(panel, client, CommandPanelHandler, MENU_TIME_FOREVER);
+	SendPanelToClient(panel, argClient, CommandPanelHandler, MENU_TIME_FOREVER);
 
 	CloseHandle(panel);
 }
 
-public CommandPanelHandler (Handle:menu, MenuAction:action,client, param2)
+public CommandPanelHandler (Handle:menu, MenuAction:action,argClient, param2)
 {
     if ( action == MenuAction_Select )
     {
@@ -186,15 +186,15 @@ public CommandPanelHandler (Handle:menu, MenuAction:action,client, param2)
 			{
 				case 7:
 				{
-					if(g_iCurrentPage[client] > 1)
-						g_iCurrentPage[client]--;
-					CommandPanel(client);
+					if(g_iCurrentPage[argClient] > 1)
+						g_iCurrentPage[argClient]--;
+					CommandPanel(argClient);
 				}
 				case 8:
 				{
-					if(g_iCurrentPage[client] < maxpage)
-						g_iCurrentPage[client]++;
-					CommandPanel(client);
+					if(g_iCurrentPage[argClient] < maxpage)
+						g_iCurrentPage[argClient]++;
+					CommandPanel(argClient);
 				}
 			}
 		}
@@ -204,24 +204,24 @@ public CommandPanelHandler (Handle:menu, MenuAction:action,client, param2)
 			{
 				case 8:
 				{
-					if(g_iCurrentPage[client] > 1)
-						g_iCurrentPage[client]--;
-					CommandPanel(client);
+					if(g_iCurrentPage[argClient] > 1)
+						g_iCurrentPage[argClient]--;
+					CommandPanel(argClient);
 				}
 				case 9:
 				{
-					if(g_iCurrentPage[client] < maxpage)
-						g_iCurrentPage[client]++;
-					CommandPanel(client);
+					if(g_iCurrentPage[argClient] < maxpage)
+						g_iCurrentPage[argClient]++;
+					CommandPanel(argClient);
 				}
 			}
 		}
     }
 }
 
-Menu(client)
+MainMenu(argClient)
 {
-	if (0 < client < MaxClients)
+	if (0 < argClient < MaxClients)
 	{
 		new Handle:menu = CreateMenu(Handle_Menu);
 		SetMenuTitle(menu, "Timer - Main Menu \nby Zipcore");
@@ -246,11 +246,11 @@ Menu(client)
 		}
 		AddMenuItem(menu, "credits", "Credits");
 
-		DisplayMenu(menu, client, MENU_TIME_FOREVER);
+		DisplayMenu(menu, argClient, MENU_TIME_FOREVER);
 	}
 }
 
-public Handle_Menu(Handle:menu, MenuAction:action, client, itemNum)
+public Handle_Menu(Handle:menu, MenuAction:action, argClient, itemNum)
 {
 	if ( action == MenuAction_Select )
 	{
@@ -260,39 +260,39 @@ public Handle_Menu(Handle:menu, MenuAction:action, client, itemNum)
 		{
 			if(StrEqual(info, "mode"))
 			{
-				FakeClientCommand(client, "sm_style");
+				FakeClientCommand(argClient, "sm_style");
 			}
 			else if(StrEqual(info, "info"))
 			{
-				FakeClientCommand(client, "sm_physicinfo");
+				FakeClientCommand(argClient, "sm_physicinfo");
 			}
 			else if(StrEqual(info, "wrm"))
 			{
-				WorldRecordMenu(client);
+				WorldRecordMenu(argClient);
 			}
 			else if(StrEqual(info, "tele"))
 			{
-				TeleportMenu(client);
+				TeleportMenu(argClient);
 			}
 			else if(StrEqual(info, "challenge"))
 			{
-				if(IsClientInGame(client)) FakeClientCommand(client, "sm_challenge");
+				if(IsClientInGame(argClient)) FakeClientCommand(argClient, "sm_challenge");
 			}
 			else if(StrEqual(info, "hud"))
 			{
-				if(IsClientInGame(client)) FakeClientCommand(client, "sm_hud");
+				if(IsClientInGame(argClient)) FakeClientCommand(argClient, "sm_hud");
 			}
 			else if(StrEqual(info, "credits"))
 			{
-				FakeClientCommand(client, "sm_credits");
+				FakeClientCommand(argClient, "sm_credits");
 			}
 		}
 	}
 }
 
-WorldRecordMenu(client)
+WorldRecordMenu(argClient)
 {
-	if (0 < client < MaxClients)
+	if (0 < argClient < MaxClients)
 	{
 		new Handle:menu = CreateMenu(Handle_WorldRecordMenu);
 
@@ -303,11 +303,11 @@ WorldRecordMenu(client)
 		AddMenuItem(menu, "swr", "Short World Record");
 		AddMenuItem(menu, "main", "Back");
 
-		DisplayMenu(menu, client, MENU_TIME_FOREVER);
+		DisplayMenu(menu, argClient, MENU_TIME_FOREVER);
 	}
 }
 
-public Handle_WorldRecordMenu(Handle:menu, MenuAction:action, client, itemNum)
+public Handle_WorldRecordMenu(Handle:menu, MenuAction:action, argClient, itemNum)
 {
 	if ( action == MenuAction_Select )
 	{
@@ -317,27 +317,27 @@ public Handle_WorldRecordMenu(Handle:menu, MenuAction:action, client, itemNum)
 		{
 			if(StrEqual(info, "wr"))
 			{
-				FakeClientCommand(client, "sm_top");
+				FakeClientCommand(argClient, "sm_top");
 			}
 			else if(StrEqual(info, "bwr"))
 			{
-				FakeClientCommand(client, "sm_btop");
+				FakeClientCommand(argClient, "sm_btop");
 			}
 			else if(StrEqual(info, "swr"))
 			{
-				FakeClientCommand(client, "sm_stop");
+				FakeClientCommand(argClient, "sm_stop");
 			}
 			else if(StrEqual(info, "main"))
 			{
-				FakeClientCommand(client, "sm_menu");
+				FakeClientCommand(argClient, "sm_menu");
 			}
 		}
 	}
 }
 
-TeleportMenu(client)
+TeleportMenu(argClient)
 {
-	if (0 < client < MaxClients)
+	if (0 < argClient < MaxClients)
 	{
 		new Handle:menu = CreateMenu(Handle_TeleportMenu);
 
@@ -357,11 +357,11 @@ TeleportMenu(client)
 		}
 		AddMenuItem(menu, "main", "Back");
 
-		DisplayMenu(menu, client, MENU_TIME_FOREVER);
+		DisplayMenu(menu, argClient, MENU_TIME_FOREVER);
 	}
 }
 
-public Handle_TeleportMenu(Handle:menu, MenuAction:action, client, itemNum)
+public Handle_TeleportMenu(Handle:menu, MenuAction:action, argClient, itemNum)
 {
 	if ( action == MenuAction_Select )
 	{
@@ -371,19 +371,19 @@ public Handle_TeleportMenu(Handle:menu, MenuAction:action, client, itemNum)
 		{
 			if(StrEqual(info, "teleme"))
 			{
-				FakeClientCommand(client, "sm_tpto");
+				FakeClientCommand(argClient, "sm_tpto");
 			}
 			else if(StrEqual(info, "levels"))
 			{
-				FakeClientCommand(client, "sm_stage");
+				FakeClientCommand(argClient, "sm_stage");
 			}
 			else if(StrEqual(info, "checkpoint"))
 			{
-				FakeClientCommand(client, "sm_cphelp");
+				FakeClientCommand(argClient, "sm_cphelp");
 			}
 			else if(StrEqual(info, "main"))
 			{
-				FakeClientCommand(client, "sm_menu");
+				FakeClientCommand(argClient, "sm_menu");
 			}
 		}
 	}

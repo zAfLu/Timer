@@ -113,7 +113,7 @@ stock Weapon_CreateForOwner(client, const String:className[])
  * @param weapon		Weapon Entity.
  * @return				Subtype of the weapon.
  */
-stock Weapon_GetSubType(weapon, value)
+stock Weapon_GetSubType(weapon)
 {
 	return GetEntProp(weapon, Prop_Data, "m_iSubType");
 }
@@ -308,10 +308,7 @@ stock Weapon_SetClips(weapon, primary, secondary)
  */
 stock Weapon_GetPrimaryAmmoCount(weapon)
 {
-	if(GetEngineVersion() != Engine_CSGO)
-		return GetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoCount");
-	else
-		return GetEntProp(weapon, Prop_Data, "m_iPrimaryReserveAmmoCount");
+	return GetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoCount");
 }
 
 /*
@@ -326,10 +323,7 @@ stock Weapon_GetPrimaryAmmoCount(weapon)
  */
 stock Weapon_SetPrimaryAmmoCount(weapon, value)
 {
-	if(GetEngineVersion() != Engine_CSGO)
-		SetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoCount", value);
-	else
-		SetEntProp(weapon, Prop_Data, "m_iPrimaryReserveAmmoCount", value);
+	SetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoCount", value);
 }
 
 /*
@@ -343,10 +337,7 @@ stock Weapon_SetPrimaryAmmoCount(weapon, value)
  */
 stock Weapon_GetSecondaryAmmoCount(weapon)
 {
-	if(GetEngineVersion() != Engine_CSGO)
-		return GetEntProp(weapon, Prop_Data, "m_iSecondaryAmmoCount");
-	else
-		SetEntProp(weapon, Prop_Data, "m_iSecondaryReserveAmmoCount", value);
+	return GetEntProp(weapon, Prop_Data, "m_iSecondaryAmmoCount");
 }
 
 /*
@@ -361,10 +352,7 @@ stock Weapon_GetSecondaryAmmoCount(weapon)
  */
 stock Weapon_SetSecondaryAmmoCount(weapon, value)
 {
-	if(GetEngineVersion() != Engine_CSGO)
-		SetEntProp(weapon, Prop_Data, "m_iSecondaryAmmoCount", value);
-	else
-		SetEntProp(weapon, Prop_Data, "m_iSecondaryReserveAmmoCount", value);
+	SetEntProp(weapon, Prop_Data, "m_iSecondaryAmmoCount", value);
 }
 
 /*
